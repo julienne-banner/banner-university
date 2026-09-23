@@ -391,10 +391,16 @@ main{min-width:0}
 
 /* mobile */
 .menubtn{display:none}
+.sidebar-close{display:none}
+.sidebar-backdrop{display:none}
 @media (max-width:880px){
   .shell.active{grid-template-columns:1fr}
-  .sidebar{position:fixed;z-index:40;width:272px;left:0;top:0;transform:translateX(-100%);transition:transform .2s}
+  .sidebar{position:fixed;z-index:45;width:272px;left:0;top:0;transform:translateX(-100%);transition:transform .2s}
   .sidebar.open{transform:translateX(0)}
+  .sidebar-close{display:block;position:absolute;top:14px;right:14px;background:var(--bg);border:0;border-radius:8px;width:30px;height:30px;font-size:14px;color:var(--ink-soft);z-index:2}
+  .sidebar-close:hover{color:var(--coral-deep)}
+  .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(27,36,48,.45);z-index:40}
+  .sidebar-backdrop.show{display:block}
   .menubtn{display:inline-flex;background:var(--ink);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
   .page{padding:32px 20px 80px}
   .topbar{padding:14px 20px}
@@ -467,7 +473,9 @@ main{min-width:0}
 
 <!-- ============ APP SHELL ============ -->
 <div class="shell" id="shell">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
   <aside class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close menu">✕</button>
     <div class="sb-brand">
       <div class="client-logo" id="sbClientLogo">AH</div>
       <span class="cname" id="sbClientName">April Housing</span>
@@ -531,55 +539,8 @@ main{min-width:0}
 
   <div class="admin-wrap">
   <div class="admin-screen active" id="screenProgress">
-    <div class="admin-cards">
-      <div class="admin-card"><div class="mlabel">Total users</div><div class="mval">17</div></div>
-      <div class="admin-card"><div class="mlabel">Completed</div><div class="mval">6</div></div>
-      <div class="admin-card"><div class="mlabel">In progress</div><div class="mval">8</div></div>
-      <div class="admin-card"><div class="mlabel">Not started</div><div class="mval">3</div></div>
-    </div>
-
-    <div class="client-group">
-      <div class="client-group-head">
-        <div class="clogo">AH</div><h3>April Housing</h3><span class="ccount">6 users</span>
-      </div>
-      <table class="admin-table">
-        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
-        <tr><td>Jordan Reyes</td><td>jordan@aprilhousing.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-        <tr><td>Priya Nair</td><td>priya@aprilhousing.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
-        <tr><td>Sam Walsh</td><td>sam@aprilhousing.com</td><td><span class="status-pill notstarted"><span class="dot"></span>Not started</span></td></tr>
-        <tr><td>Casey Dunn</td><td>casey@aprilhousing.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-        <tr><td>Morgan Lee</td><td>morgan@aprilhousing.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
-        <tr><td>Alex Kim</td><td>alex@aprilhousing.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-      </table>
-    </div>
-
-    <div class="client-group">
-      <div class="client-group-head">
-        <div class="clogo">MP</div><h3>Morgan Properties</h3><span class="ccount">6 users</span>
-      </div>
-      <table class="admin-table">
-        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
-        <tr><td>Taylor Brooks</td><td>taylor@morgan.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
-        <tr><td>Jamie Fox</td><td>jamie@morgan.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-        <tr><td>Riley Chen</td><td>riley@morgan.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-        <tr><td>Drew Patel</td><td>drew@morgan.com</td><td><span class="status-pill notstarted"><span class="dot"></span>Not started</span></td></tr>
-        <tr><td>Sky Rivera</td><td>sky@morgan.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
-        <tr><td>Quinn Ortiz</td><td>quinn@morgan.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-      </table>
-    </div>
-
-    <div class="client-group">
-      <div class="client-group-head">
-        <div class="clogo">CH</div><h3>Clear Height</h3><span class="ccount">5 users</span>
-      </div>
-      <table class="admin-table">
-        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
-        <tr><td>Harper Voss</td><td>harper@clearheight.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
-        <tr><td>Reese Gallo</td><td>reese@clearheight.com</td><td><span class="status-pill notstarted"><span class="dot"></span>Not started</span></td></tr>
-        <tr><td>Emerson Diaz</td><td>emerson@clearheight.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-        <tr><td>Finley Cruz</td><td>finley@clearheight.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
-        <tr><td>Rowan Blake</td><td>rowan@clearheight.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
-      </table>
+    <div id="progressDashboard">
+      <p style="color:var(--ink-faint);font-style:italic">Loading…</p>
     </div>
   </div>
   <!-- /screenProgress -->
@@ -692,9 +653,19 @@ document.getElementById('adminBackToLogin').addEventListener('click', async ()=>
 });
 </script>
 <script>
+function openMobileSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarBackdrop').classList.add('show');
+}
+function closeMobileSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+}
 document.getElementById('menuBtn').addEventListener('click', ()=>{
-  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar').classList.contains('open') ? closeMobileSidebar() : openMobileSidebar();
 });
+document.getElementById('sidebarCloseBtn').addEventListener('click', closeMobileSidebar);
+document.getElementById('sidebarBackdrop').addEventListener('click', closeMobileSidebar);
 
 let currentLearner = null;
 let activeLearnerModuleId = null;
@@ -976,7 +947,7 @@ document.getElementById('sbNav').addEventListener('click', (e)=>{
   activeLearnerModuleId = btn.dataset.moduleId;
   renderLearnerNav();
   renderActiveLearnerModule();
-  document.getElementById('sidebar').classList.remove('open');
+  closeMobileSidebar();
 });
 
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
@@ -991,7 +962,7 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
 
 document.getElementById('switchUser').addEventListener('click', ()=>{
   document.getElementById('shell').classList.remove('active');
-  document.getElementById('sidebar').classList.remove('open');
+  closeMobileSidebar();
   if(currentClient) localStorage.removeItem(sessionKeyFor(currentClient.slug));
   document.getElementById('signinScreen').style.display='flex';
 });
@@ -1004,6 +975,7 @@ function showAdminTab(name){
   document.getElementById(map[name]).classList.add('active');
   if(name==='clients') renderClientCards();
   if(name==='archived') renderArchivedCards();
+  if(name==='progress') loadProgressDashboard();
 }
 document.querySelectorAll('.admin-tab').forEach(t=>{
   t.addEventListener('click', ()=> showAdminTab(t.dataset.tab));
@@ -1034,11 +1006,71 @@ function openModal({title, body, danger, confirmText, typeConfirmValue, onConfir
 }
 
 /* ---- client data model ---- */
-let clients = [
-  {name:'April Housing', slug:'aprilhousing', initials:'AH', logo:null, archived:false},
-  {name:'Morgan Properties', slug:'morgan', initials:'MP', logo:null, archived:false},
-  {name:'Clear Height', slug:'clearheight', initials:'CH', logo:null, archived:false}
-];
+let clients = [];
+
+async function fetchClients(){
+  const { data, error } = await sb.from('clients').select('*').order('created_at');
+  if(error){ console.error('Failed to load clients:', error); return; }
+  clients = (data||[]).map(row => ({
+    dbId: row.id, name: row.name, slug: row.slug, initials: row.initials,
+    logo: row.logo || null, archived: row.archived
+  }));
+}
+
+async function loadProgressDashboard(){
+  const container = document.getElementById('progressDashboard');
+  container.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">Loading…</p>`;
+
+  const [{ data: clientRows, error: cErr }, { data: learnerRows, error: lErr }] = await Promise.all([
+    sb.from('clients').select('*').eq('archived', false).order('name'),
+    sb.from('learners').select('*')
+  ]);
+
+  if(cErr || lErr){
+    console.error('Progress dashboard load failed:', cErr, lErr);
+    container.innerHTML = `<p style="color:var(--coral-deep)">Couldn't load progress data — check the browser console for details.</p>`;
+    return;
+  }
+
+  function statusFor(l){
+    if(l.completed_at) return { cls:'completed', label:'Completed' };
+    if(!l.progress || Object.keys(l.progress).length===0) return { cls:'notstarted', label:'Not started' };
+    return { cls:'inprogress', label:'In progress' };
+  }
+
+  const total = learnerRows.length;
+  const completed = learnerRows.filter(l=>l.completed_at).length;
+  const notStarted = learnerRows.filter(l=>!l.completed_at && (!l.progress || Object.keys(l.progress).length===0)).length;
+  const inProgress = total - completed - notStarted;
+
+  const groupsHtml = (clientRows||[]).map(c=>{
+    const learnersForClient = learnerRows.filter(l=>l.client_id===c.id);
+    if(learnersForClient.length===0) return '';
+    const rows = learnersForClient.map(l=>{
+      const s = statusFor(l);
+      return `<tr><td>${l.name||'—'}</td><td>${l.email}</td><td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td></tr>`;
+    }).join('');
+    return `<div class="client-group">
+      <div class="client-group-head">
+        <div class="clogo">${c.initials||'?'}</div><h3>${c.name}</h3><span class="ccount">${learnersForClient.length} user${learnersForClient.length===1?'':'s'}</span>
+      </div>
+      <table class="admin-table">
+        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+        ${rows}
+      </table>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="admin-cards">
+      <div class="admin-card"><div class="mlabel">Total users</div><div class="mval">${total}</div></div>
+      <div class="admin-card"><div class="mlabel">Completed</div><div class="mval">${completed}</div></div>
+      <div class="admin-card"><div class="mlabel">In progress</div><div class="mval">${inProgress}</div></div>
+      <div class="admin-card"><div class="mlabel">Not started</div><div class="mval">${notStarted}</div></div>
+    </div>
+    ${groupsHtml || '<p style="color:var(--ink-faint);font-style:italic;margin-top:20px">No learners have signed up yet.</p>'}
+  `;
+}
 let editingIndex = null;
 
 function slugify(name){ return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,''); }
@@ -1137,7 +1169,7 @@ async function showShellForUser(client, user){
   document.getElementById('sbUserName').textContent = user.name || user.email;
   document.getElementById('sbUserEmail').textContent = user.email;
   document.getElementById('shell').classList.add('active');
-  document.getElementById('sidebar').classList.remove('open');
+  closeMobileSidebar();
   currentClient = client;
   currentLearner = user;
   currentLearner.progress = user.progress || {};
@@ -1244,6 +1276,7 @@ document.getElementById('adminGateForm').addEventListener('submit', async e=>{
     }
     document.getElementById('adminGateScreen').style.display='none';
     document.getElementById('adminView').classList.add('active');
+    loadProgressDashboard();
   } finally {
     submitBtn.disabled = false;
   }
@@ -1257,6 +1290,7 @@ async function bootstrapRoute(){
       if(adminRow){
         document.getElementById('signinScreen').style.display='none';
         document.getElementById('adminView').classList.add('active');
+        loadProgressDashboard();
         return;
       }
     }
@@ -1269,6 +1303,12 @@ async function bootstrapRoute(){
   const match = slug ? clients.find(c=>!c.archived && c.slug===slug) : null;
 
   if(slug && !match){
+    document.getElementById('signinScreen').style.display='none';
+    document.getElementById('invalidLinkScreen').style.display='flex';
+    return;
+  }
+
+  if(!match && clients.length===0){
     document.getElementById('signinScreen').style.display='none';
     document.getElementById('invalidLinkScreen').style.display='flex';
     return;
@@ -1296,7 +1336,10 @@ async function bootstrapRoute(){
   }
   document.getElementById('signinScreen').style.display='flex';
 }
-bootstrapRoute();
+(async ()=>{
+  await fetchClients();
+  await bootstrapRoute();
+})();
 
 function clientCardTemplate(c, idx){
   const logo = c.logo ? `<img src="${c.logo}">` : c.initials;
@@ -1363,7 +1406,12 @@ document.getElementById('clientCardsList').addEventListener('click', (e)=>{
       title:`Archive ${c.name}?`,
       body:`Their onboarding site will go offline immediately. Nothing is deleted — you can restore them anytime from the Archived tab.`,
       confirmText:'Archive client',
-      onConfirm:()=>{ c.archived = true; renderClientCards(); }
+      onConfirm: async ()=>{
+        c.archived = true;
+        renderClientCards();
+        const { error } = await sb.from('clients').update({ archived:true }).eq('id', c.dbId);
+        if(error) console.error('Failed to archive client:', error);
+      }
     });
     return;
   }
@@ -1373,16 +1421,25 @@ document.getElementById('clientCardsList').addEventListener('click', (e)=>{
       title:`Delete ${c.name} permanently?`,
       body:`<span class="danger-text">This cannot be undone.</span> Their site, all quiz content, and every user's progress will be permanently deleted right away.`,
       danger:true, confirmText:'Delete permanently', typeConfirmValue:c.name,
-      onConfirm:()=>{ clients.splice(idx,1); delete sampleModules[c.name]; delete activeModuleId[c.name]; renderClientCards(); }
+      onConfirm: async ()=>{
+        clients.splice(idx,1);
+        delete sampleModules[c.name]; delete activeModuleId[c.name];
+        renderClientCards();
+        const { error } = await sb.from('clients').delete().eq('id', c.dbId);
+        if(error) console.error('Failed to delete client from database:', error);
+      }
     });
     return;
   }
 });
-document.getElementById('archivedCardsList').addEventListener('click', (e)=>{
+document.getElementById('archivedCardsList').addEventListener('click', async (e)=>{
   const cardEl = e.target.closest('.client-card'); if(!cardEl) return;
   if(e.target.dataset.role === 'restorebtn'){
-    clients[+cardEl.dataset.idx].archived = false;
+    const c = clients[+cardEl.dataset.idx];
+    c.archived = false;
     renderArchivedCards();
+    const { error } = await sb.from('clients').update({ archived:false }).eq('id', c.dbId);
+    if(error) console.error('Failed to restore client:', error);
   }
 });
 document.addEventListener('click', (e)=>{
@@ -1421,7 +1478,7 @@ document.getElementById('logoFileInput').addEventListener('change', (e)=>{
   reader.readAsDataURL(file);
 });
 
-document.getElementById('saveClientBtn').addEventListener('click', ()=>{
+document.getElementById('saveClientBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('newClientName').value.trim();
   if(!name) return;
   const slug = slugify(name);
@@ -1429,27 +1486,50 @@ document.getElementById('saveClientBtn').addEventListener('click', ()=>{
   const logoImg = document.getElementById('logoPreviewWrap').querySelector('img');
   const logo = logoImg ? logoImg.src : null;
 
-  if(editingIndex !== null){
-    const old = clients[editingIndex];
-    if(old.name !== name){
-      sampleModules[name] = sampleModules[old.name]||[];
-      delete sampleModules[old.name];
-      activeModuleId[name] = activeModuleId[old.name];
-      delete activeModuleId[old.name];
+  const btn = document.getElementById('saveClientBtn');
+  const originalBtnText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try{
+    if(editingIndex !== null){
+      const old = clients[editingIndex];
+      const finalLogo = logo || old.logo;
+      const { error } = await sb.from('clients')
+        .update({ name, slug, initials, logo: finalLogo })
+        .eq('id', old.dbId);
+      if(error) throw error;
+
+      if(old.name !== name){
+        sampleModules[name] = sampleModules[old.name]||[];
+        delete sampleModules[old.name];
+        activeModuleId[name] = activeModuleId[old.name];
+        delete activeModuleId[old.name];
+      }
+      clients[editingIndex] = {...old, name, slug, initials, logo: finalLogo};
+    } else {
+      const { data: inserted, error } = await sb.from('clients')
+        .insert({ name, slug, initials, logo, archived:false })
+        .select().single();
+      if(error) throw error;
+      clients.push({ dbId: inserted.id, name, slug, initials, logo, archived:false });
+      sampleModules[name] = [];
     }
-    clients[editingIndex] = {...old, name, slug, initials, logo: logo||old.logo};
-  } else {
-    clients.push({name, slug, initials, logo, archived:false});
-    sampleModules[name] = [];
+    renderClientCards();
+    document.getElementById('clientSavedToast').textContent = editingIndex!==null ? '✓ Changes saved' : "✓ Client added — their site is live at the URL above";
+    document.getElementById('clientSavedToast').classList.add('show');
+    document.getElementById('newClientName').value='';
+    document.getElementById('slugPreview').textContent='clientname';
+    document.getElementById('logoPreviewWrap').innerHTML='';
+    editingIndex = null;
+    setTimeout(()=>document.getElementById('clientSavedToast').classList.remove('show'), 3500);
+  } catch(err){
+    console.error('Save client failed:', err);
+    openModal({ title:'Could not save client', body:'Something went wrong saving to the database: '+(err.message||String(err)), confirmText:'OK', onConfirm:()=>{} });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalBtnText;
   }
-  renderClientCards();
-  document.getElementById('clientSavedToast').textContent = editingIndex!==null ? '✓ Changes saved' : "✓ Client added — their site is live at the URL above";
-  document.getElementById('clientSavedToast').classList.add('show');
-  document.getElementById('newClientName').value='';
-  document.getElementById('slugPreview').textContent='clientname';
-  document.getElementById('logoPreviewWrap').innerHTML='';
-  editingIndex = null;
-  setTimeout(()=>document.getElementById('clientSavedToast').classList.remove('show'), 3500);
 });
 
 /* ---- per-client quiz management (tabs/modules, each with its own questions + flashcards) ---- */
