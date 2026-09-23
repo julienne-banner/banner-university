@@ -386,6 +386,7 @@ main{min-width:0}
   .page h1{font-size:27px}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -433,14 +434,18 @@ main{min-width:0}
 <div class="signin-screen" id="adminGateScreen" style="display:none">
   <div class="signin-card">
     <h1>Admin access</h1>
-    <p class="sub">Enter the admin password to continue.</p>
+    <p class="sub">Log in with your admin account.</p>
     <form id="adminGateForm">
+      <div class="field">
+        <label for="adminEmail">Email</label>
+        <input id="adminEmail" type="email" placeholder="you@example.com" required>
+      </div>
       <div class="field">
         <label for="adminPassword">Password</label>
         <input id="adminPassword" type="password" placeholder="••••••••" required>
       </div>
-      <p class="auth-error" id="adminGateError" style="display:none">Incorrect password.</p>
-      <button type="submit" class="btn-primary">Enter</button>
+      <p class="auth-error" id="adminGateError" style="display:none">Incorrect email or password.</p>
+      <button type="submit" class="btn-primary" id="adminGateSubmitBtn">Enter</button>
     </form>
   </div>
 </div>
@@ -660,8 +665,10 @@ main{min-width:0}
 </div>
 
 <script>
-document.getElementById('adminBackToLogin').addEventListener('click', ()=>{
+document.getElementById('adminBackToLogin').addEventListener('click', async ()=>{
   document.getElementById('adminView').classList.remove('active');
+  await sb.auth.signOut();
+  document.getElementById('adminEmail').value='';
   document.getElementById('adminPassword').value='';
   document.getElementById('adminGateError').style.display='none';
   document.getElementById('adminGateScreen').style.display='flex';
@@ -885,8 +892,12 @@ let editingIndex = null;
 
 function slugify(name){ return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,''); }
 
+/* ---------- Supabase connection ---------- */
+const SUPABASE_URL = 'https://lfvgjeeaskvpcxhluzuf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AeAGZbYLByb8rbUCTVTD7g_ZTQ7l4EQ';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 /* ---------- multi-tenant routing (client-specific links + admin gate) ---------- */
-const ADMIN_ACCESS_CODE = 'banner-admin-2026'; // soft, client-side gate only — see chat notes
 let currentClient = null;
 let authMode = 'signup';
 
@@ -904,12 +915,6 @@ function routedSlug(){
   if(seg && seg!=='banneradminview') return seg;
   return (new URLSearchParams(location.search).get('client')||'').toLowerCase() || null;
 }
-
-function usersDB(){
-  try { return JSON.parse(localStorage.getItem('banner_users_db')||'[]'); }
-  catch(e){ return []; }
-}
-function saveUsersDB(list){ localStorage.setItem('banner_users_db', JSON.stringify(list)); }
 function sessionKeyFor(slug){ return 'banner_session_'+slug; }
 
 function brandSigninFor(client){
@@ -945,58 +950,93 @@ document.querySelectorAll('.auth-toggle-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> setAuthMode(btn.dataset.mode));
 });
 
-document.getElementById('signinForm').addEventListener('submit', e=>{
+document.getElementById('signinForm').addEventListener('submit', async e=>{
   e.preventDefault();
   const errorEl = document.getElementById('authError');
   errorEl.style.display='none';
+  const submitBtn = document.getElementById('authSubmitBtn');
   const email = document.getElementById('workemail').value.trim();
   const name = document.getElementById('fullname').value.trim();
-  const db = usersDB();
 
-  if(authMode==='signup'){
-    const dup = db.find(u=>u.email.toLowerCase()===email.toLowerCase());
-    if(dup){
-      errorEl.textContent = 'This email is already registered. Try logging in instead.';
-      errorEl.style.display='block';
-      return;
+  submitBtn.disabled = true;
+  try{
+    if(authMode==='signup'){
+      const { data, error } = await sb.rpc('learner_signup', {
+        p_name: name, p_email: email, p_client_slug: currentClient.slug
+      });
+      if(error){
+        if(error.message.includes('duplicate_email')){
+          errorEl.textContent = 'This email is already registered. Try logging in instead.';
+        } else if(error.message.includes('invalid_client')){
+          errorEl.textContent = "This link isn't recognized. Please check it with your training administrator.";
+        } else {
+          errorEl.textContent = 'Something went wrong. Please try again.';
+        }
+        errorEl.style.display='block';
+        return;
+      }
+      const user = data[0];
+      localStorage.setItem(sessionKeyFor(currentClient.slug), user.email);
+      showShellForUser(currentClient, user);
+    } else {
+      const { data, error } = await sb.rpc('learner_login', {
+        p_email: email, p_client_slug: currentClient.slug
+      });
+      if(error || !data || data.length===0){
+        errorEl.textContent = "We couldn't find an account with that email for this link. Click Sign up above to create one.";
+        errorEl.style.display='block';
+        return;
+      }
+      const user = data[0];
+      localStorage.setItem(sessionKeyFor(currentClient.slug), user.email);
+      showShellForUser(currentClient, user);
     }
-    const user = { name, email, client: currentClient.name, role:'learner', createdAt: new Date().toISOString() };
-    db.push(user);
-    saveUsersDB(db);
-    localStorage.setItem(sessionKeyFor(currentClient.slug), email);
-    showShellForUser(currentClient, user);
-  } else {
-    const user = db.find(u=>u.email.toLowerCase()===email.toLowerCase());
-    if(!user){
-      errorEl.textContent = "We couldn't find an account with that email. Click Sign up above to create one.";
-      errorEl.style.display='block';
-      return;
-    }
-    if(user.client !== currentClient.name){
-      errorEl.textContent = `That email isn't registered for ${currentClient.name}. Check you're using the right link.`;
-      errorEl.style.display='block';
-      return;
-    }
-    localStorage.setItem(sessionKeyFor(currentClient.slug), email);
-    showShellForUser(currentClient, user);
+  } finally {
+    submitBtn.disabled = false;
   }
 });
 
-document.getElementById('adminGateForm').addEventListener('submit', e=>{
+document.getElementById('adminGateForm').addEventListener('submit', async e=>{
   e.preventDefault();
-  const val = document.getElementById('adminPassword').value;
   const errEl = document.getElementById('adminGateError');
-  if(val === ADMIN_ACCESS_CODE){
-    errEl.style.display='none';
+  const submitBtn = document.getElementById('adminGateSubmitBtn');
+  errEl.style.display='none';
+  const email = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+
+  submitBtn.disabled = true;
+  try{
+    const { error: authError } = await sb.auth.signInWithPassword({ email, password });
+    if(authError){
+      errEl.textContent = 'Incorrect email or password.';
+      errEl.style.display='block';
+      return;
+    }
+    const { data: adminRow, error: adminError } = await sb.from('admins').select('email').eq('email', email.toLowerCase()).maybeSingle();
+    if(adminError || !adminRow){
+      await sb.auth.signOut();
+      errEl.textContent = "That account doesn't have admin access.";
+      errEl.style.display='block';
+      return;
+    }
     document.getElementById('adminGateScreen').style.display='none';
     document.getElementById('adminView').classList.add('active');
-  } else {
-    errEl.style.display='block';
+  } finally {
+    submitBtn.disabled = false;
   }
 });
 
-function bootstrapRoute(){
+async function bootstrapRoute(){
   if(routedAdmin()){
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      const { data: adminRow } = await sb.from('admins').select('email').eq('email', session.user.email.toLowerCase()).maybeSingle();
+      if(adminRow){
+        document.getElementById('signinScreen').style.display='none';
+        document.getElementById('adminView').classList.add('active');
+        return;
+      }
+    }
     document.getElementById('signinScreen').style.display='none';
     document.getElementById('adminGateScreen').style.display='flex';
     return;
@@ -1022,8 +1062,13 @@ function bootstrapRoute(){
 
   const remembered = localStorage.getItem(sessionKeyFor(currentClient.slug));
   if(remembered){
-    const user = usersDB().find(u=>u.email.toLowerCase()===remembered.toLowerCase() && u.client===currentClient.name);
-    if(user){ showShellForUser(currentClient, user); return; }
+    const { data, error } = await sb.rpc('learner_login', {
+      p_email: remembered, p_client_slug: currentClient.slug
+    });
+    if(!error && data && data.length>0){
+      showShellForUser(currentClient, data[0]);
+      return;
+    }
     localStorage.removeItem(sessionKeyFor(currentClient.slug));
   }
   document.getElementById('signinScreen').style.display='flex';
