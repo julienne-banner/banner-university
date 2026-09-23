@@ -45,7 +45,8 @@ h1,h2,h3,h4{font-family:var(--display);color:var(--ink);letter-spacing:-.01em}
   pointer-events:none}
 .signin-card{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:44px 40px;max-width:420px;width:100%;position:relative;z-index:1;border:1px solid var(--line-soft)}
 .client-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.client-logo{width:38px;height:38px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:16px;flex-shrink:0}
+.client-logo{width:38px;height:38px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:16px;flex-shrink:0;overflow:hidden}
+.client-logo img{width:100%;height:100%;object-fit:cover;display:block}
 .client-brand .cname{font-size:14px;color:var(--ink-soft);font-weight:500}
 .signin-card h1{font-size:26px;font-weight:700;line-height:1.15;margin-bottom:8px}
 .signin-card .sub{color:var(--ink-soft);font-size:15px;margin-bottom:26px}
@@ -957,14 +958,21 @@ document.getElementById('sbNav').addEventListener('click', (e)=>{
   closeMobileSidebar();
 });
 
-document.getElementById('resetBtn').addEventListener('click', async ()=>{
+document.getElementById('resetBtn').addEventListener('click', ()=>{
   if(!currentLearner) return;
-  currentLearner.progress = {};
-  await sb.rpc('save_progress', { p_learner_id: currentLearner.id, p_progress: {}, p_completed: false });
-  const modules = sampleModules[currentClient?.name] || [];
-  activeLearnerModuleId = modules[0] ? modules[0].id : null;
-  renderLearnerNav();
-  renderActiveLearnerModule();
+  openModal({
+    title:'Reset your progress?',
+    body:'Every tab you\'ve completed will be marked as not-done again. This can\'t be undone.',
+    danger:true, confirmText:'Reset progress',
+    onConfirm: async ()=>{
+      currentLearner.progress = {};
+      await sb.rpc('save_progress', { p_learner_id: currentLearner.id, p_progress: {}, p_completed: false });
+      const modules = sampleModules[currentClient?.name] || [];
+      activeLearnerModuleId = modules[0] ? modules[0].id : null;
+      renderLearnerNav();
+      renderActiveLearnerModule();
+    }
+  });
 });
 
 document.getElementById('switchUser').addEventListener('click', ()=>{
@@ -1107,13 +1115,17 @@ function routedSlug(){
 }
 function sessionKeyFor(slug){ return 'banner_session_'+slug; }
 
+function setClientLogoEl(el, client){
+  el.innerHTML = client.logo ? `<img src="${client.logo}" alt="">` : '';
+  if(!client.logo) el.textContent = client.initials;
+}
 function brandSigninFor(client){
-  document.getElementById('signinClientLogo').textContent = client.initials;
+  setClientLogoEl(document.getElementById('signinClientLogo'), client);
   document.getElementById('signinClientName').textContent = client.name;
   document.getElementById('workemail').placeholder = `you@${client.slug}.com`;
 }
 function brandSidebarFor(client){
-  document.getElementById('sbClientLogo').textContent = client.initials;
+  setClientLogoEl(document.getElementById('sbClientLogo'), client);
   document.getElementById('sbClientName').textContent = client.name;
 }
 
@@ -1149,24 +1161,35 @@ async function fetchModulesForClient(client){
   if(clientErr || !clientRow){ console.error('Could not find client in database:', client.slug, clientErr); return []; }
   client.dbId = clientRow.id;
 
-  const { data: moduleRows, error: modErr } = await sb.from('modules').select('*').eq('client_id', clientRow.id).order('sort_order');
+  // one request each for modules/questions/flashcards — regardless of how
+  // many tabs this client has — instead of looping and fetching per tab
+  const [
+    { data: moduleRows, error: modErr },
+    { data: qRows, error: qErr },
+    { data: fRows, error: fErr }
+  ] = await Promise.all([
+    sb.from('modules').select('*').eq('client_id', clientRow.id).order('sort_order'),
+    sb.from('quiz_questions').select('*').eq('client_id', clientRow.id).order('sort_order'),
+    sb.from('glossary_terms').select('*').eq('client_id', clientRow.id).order('sort_order')
+  ]);
   if(modErr){ console.error('Error loading modules:', modErr); return []; }
+  if(qErr) console.error('Error loading questions:', qErr);
+  if(fErr) console.error('Error loading flashcards:', fErr);
 
-  const modules = [];
-  for(const mrow of (moduleRows||[])){
-    const [{data:qRows, error:qErr}, {data:fRows, error:fErr}] = await Promise.all([
-      sb.from('quiz_questions').select('*').eq('module_id', mrow.id).order('sort_order'),
-      sb.from('glossary_terms').select('*').eq('module_id', mrow.id).order('sort_order')
-    ]);
-    if(qErr) console.error('Error loading questions for module', mrow.id, qErr);
-    if(fErr) console.error('Error loading flashcards for module', mrow.id, fErr);
-    modules.push({
-      id: mrow.id, dbId: mrow.id, title: mrow.title,
-      questions: (qRows||[]).map(dbQuestionToLocal),
-      flashcards: (fRows||[]).map(dbFlashcardToLocal)
-    });
-  }
-  return modules;
+  const questionsByModule = {};
+  (qRows||[]).forEach(row=>{
+    (questionsByModule[row.module_id] = questionsByModule[row.module_id] || []).push(dbQuestionToLocal(row));
+  });
+  const flashcardsByModule = {};
+  (fRows||[]).forEach(row=>{
+    (flashcardsByModule[row.module_id] = flashcardsByModule[row.module_id] || []).push(dbFlashcardToLocal(row));
+  });
+
+  return (moduleRows||[]).map(mrow => ({
+    id: mrow.id, dbId: mrow.id, title: mrow.title,
+    questions: questionsByModule[mrow.id] || [],
+    flashcards: flashcardsByModule[mrow.id] || []
+  }));
 }
 
 async function showShellForUser(client, user){
