@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banner University — Client Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F9;
+  --surface:#FFFFFF;
+  --ink:#1B2430;
+  --ink-soft:#5C6672;
+  --ink-faint:#8B93A0;
+  --line:#E4E8ED;
+  --line-soft:#EEF1F4;
+  --coral:#E1503D;
+  --coral-deep:#C33F2E;
+  --coral-soft:#FCE8E4;
+  --teal:#1F6F6B;
+  --teal-soft:#E4F1EF;
+  --success:#2F8558;
+  --success-soft:#E8F3EC;
+  --radius:14px;
+  --radius-sm:9px;
+  --display:'Sora',system-ui,sans-serif;
+  --body:'Inter',system-ui,-apple-system,sans-serif;
+  --shadow:0 1px 2px rgba(27,36,48,.04), 0 8px 24px rgba(27,36,48,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+body{font-family:var(--body);background:var(--bg);color:var(--ink);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--coral)}
+:focus-visible{outline:2.5px solid var(--coral);outline-offset:2px;border-radius:4px}
+h1,h2,h3,h4{font-family:var(--display);color:var(--ink);letter-spacing:-.01em}
+
+/* ---------- sign-in ---------- */
+.signin-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden}
+.signin-screen::before{content:"";position:absolute;inset:0;background:
+    radial-gradient(circle at 15% 20%, rgba(225,80,61,.06) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(31,111,107,.07) 0%, transparent 40%);
+  pointer-events:none}
+.signin-card{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:44px 40px;max-width:420px;width:100%;position:relative;z-index:1;border:1px solid var(--line-soft)}
+.client-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.client-logo{width:38px;height:38px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:16px;flex-shrink:0}
+.client-brand .cname{font-size:14px;color:var(--ink-soft);font-weight:500}
+.signin-card h1{font-size:26px;font-weight:700;line-height:1.15;margin-bottom:8px}
+.signin-card .sub{color:var(--ink-soft);font-size:15px;margin-bottom:26px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.field input{width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:var(--radius-sm);font-size:15px;font-family:var(--body);color:var(--ink);background:var(--surface);transition:border-color .15s}
+.field input:hover{border-color:#C9D0D8}
+.field input:focus{border-color:var(--coral);outline:none}
+.field input::placeholder{color:var(--ink-faint)}
+.btn-primary{width:100%;background:var(--coral);color:#fff;border:0;border-radius:var(--radius-sm);padding:13px;font-size:15.5px;font-weight:600;margin-top:6px;transition:background .15s}
+.btn-primary:hover{background:var(--coral-deep)}
+.signin-note{font-size:12.5px;color:var(--ink-faint);margin-top:16px;text-align:center;line-height:1.5}
+.magic-hint{background:var(--teal-soft);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--teal);margin-top:18px;display:flex;gap:8px;align-items:flex-start}
+
+/* ---------- app shell ---------- */
+.shell{display:none;grid-template-columns:272px 1fr;min-height:100vh}
+.shell.active{display:grid}
+.sidebar{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-brand{padding:22px 22px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-soft)}
+.sb-brand .client-logo{width:34px;height:34px;font-size:14px;border-radius:9px}
+.sb-brand .cname{font-family:var(--display);font-weight:600;font-size:15px;color:var(--ink)}
+.sb-title{padding:16px 22px 14px;border-bottom:1px solid var(--line-soft)}
+.sb-title .label{font-size:11.5px;color:var(--ink-faint);font-weight:500;margin-bottom:2px}
+.sb-title h2{font-size:17px;font-weight:700}
+.sb-user{padding:16px 22px;border-bottom:1px solid var(--line-soft)}
+.sb-user .uname{font-weight:600;font-size:14.5px}
+.sb-user .uemail{font-size:12.5px;color:var(--ink-faint);margin-top:1px;word-break:break-all}
+.sb-user button{background:none;border:0;color:var(--ink-faint);font-size:11.5px;padding:0;margin-top:7px;text-decoration:underline;text-underline-offset:2px}
+.sb-user button:hover{color:var(--coral)}
+.sb-progress{padding:16px 22px;border-bottom:1px solid var(--line-soft)}
+.sb-progress .toprow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;font-weight:500}
+.sb-progress .bar{height:7px;background:var(--line-soft);border-radius:99px;overflow:hidden}
+.sb-progress .bar>div{height:100%;background:var(--coral);border-radius:99px;transition:width .4s ease}
+.sb-nav{padding:10px 12px;flex:1}
+.sb-nav .navlabel{font-size:11.5px;color:var(--ink-faint);font-weight:600;padding:10px 10px 6px;text-transform:none}
+.navitem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;color:var(--ink-soft);padding:10px 11px;border-radius:0 8px 8px 0;font-size:14.5px;font-weight:500;margin-bottom:1px}
+.navitem:hover{background:var(--line-soft);color:var(--ink)}
+.navitem.active{background:var(--coral-soft);border-left-color:var(--coral);color:var(--coral-deep);font-weight:600}
+.navitem .tick{margin-left:auto;color:var(--success);font-size:12px;visibility:hidden}
+.navitem.done .tick{visibility:visible}
+.sb-foot{padding:14px 22px 20px;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:8px}
+.sb-footbtn{display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);color:var(--ink-soft);font-size:13px;font-weight:500;padding:9px 12px;border-radius:var(--radius-sm);text-align:left}
+.sb-footbtn:hover{border-color:var(--coral);color:var(--coral-deep)}
+.sb-footbtn.danger:hover{border-color:#C33F2E;color:#C33F2E}
+
+/* ---------- main content ---------- */
+main{min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--line);padding:16px 40px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+.topbar .crumb{font-size:13.5px;color:var(--ink-faint);font-weight:500}
+.topbar .pct{margin-left:auto;font-size:13px;color:var(--ink-faint);font-weight:500}
+.page{max-width:760px;margin:0 auto;padding:48px 40px 100px}
+.page .eyebrow{color:var(--coral);font-weight:600;font-size:13.5px;margin-bottom:10px}
+.page h1{font-size:34px;line-height:1.15;margin-bottom:14px}
+.page .lede{font-size:16.5px;color:var(--ink-soft);max-width:58ch;margin-bottom:8px}
+.page p{margin:14px 0;color:var(--ink-soft)}
+.divider{border:0;border-top:1px solid var(--line);margin:32px 0}
+
+/* quiz block */
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:22px 0;box-shadow:var(--shadow)}
+.quiz .qtag{font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-bottom:8px}
+.quiz .qtext{font-size:18px;font-weight:600;margin-bottom:18px;line-height:1.4}
+.opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:9px;font-size:15px;font-weight:500;color:var(--ink);transition:all .12s}
+.opt:hover:not(:disabled){border-color:var(--coral);background:#fff}
+.opt .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--ink-faint);flex-shrink:0}
+.opt.correct{background:var(--success-soft);border-color:var(--success);color:#1F5C3D}
+.opt.correct .dot{background:var(--success);border-color:var(--success)}
+.opt.wrong{background:#FBEAE7;border-color:var(--coral);color:var(--coral-deep)}
+.opt.wrong .dot{background:var(--coral);border-color:var(--coral)}
+.opt:disabled{cursor:default}
+.explain{display:none;margin-top:16px;padding-top:18px;border-top:1px dashed var(--line)}
+.explain.show{display:block;animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.explain .tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--success);background:var(--success-soft);padding:3px 9px;border-radius:99px;margin-bottom:10px}
+.explain p{margin:8px 0;color:var(--ink);font-size:15px}
+.explain-shot{margin:14px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.explain-shot .frame{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px;background:
+  repeating-linear-gradient(45deg, #EEF1F4, #EEF1F4 10px, #F6F7F9 10px, #F6F7F9 20px)}
+.explain-shot .cap{padding:8px 12px;font-size:12px;color:var(--ink-faint);border-top:1px solid var(--line)}
+
+.modfooter{margin:36px 0 0;display:flex;align-items:center;gap:14px}
+.btn-next{background:var(--coral);color:#fff;border:0;border-radius:var(--radius-sm);padding:12px 22px;font-size:15px;font-weight:600}
+.btn-next:hover{background:var(--coral-deep)}
+.btn-next:disabled{background:#D7DBE0;cursor:not-allowed}
+.gatehint{font-size:13px;color:var(--ink-faint)}
+
+/* ---------- admin ---------- */
+.admin{display:none;min-height:100vh;background:var(--bg)}
+.admin.active{display:block}
+.admin-top{background:var(--surface);border-bottom:1px solid var(--line);padding:22px 40px;position:relative}
+.admin-back-btn{position:absolute;top:22px;right:40px;background:none;border:1.5px solid var(--line);color:var(--ink-soft);font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:var(--radius-sm)}
+.admin-back-btn:hover{border-color:var(--coral);color:var(--coral-deep)}
+.admin-top h1{font-size:22px}
+.admin-top p{color:var(--ink-soft);font-size:14px;margin-top:2px}
+.admin-wrap{max-width:1080px;margin:0 auto;padding:32px 40px 80px}
+.admin-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:32px}
+.admin-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px 20px}
+.admin-card .mlabel{font-size:12.5px;color:var(--ink-faint);font-weight:500}
+.admin-card .mval{font-family:var(--display);font-size:28px;font-weight:700;margin-top:4px}
+.client-group{margin-bottom:28px}
+.client-group-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.client-group-head .clogo{width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:11px}
+.client-group-head h3{font-size:16px}
+.client-group-head .ccount{font-size:13px;color:var(--ink-faint)}
+.admin-table{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);border-collapse:collapse;overflow:hidden}
+.admin-table th{text-align:left;font-size:12px;font-weight:600;color:var(--ink-faint);padding:10px 18px;background:var(--bg);border-bottom:1px solid var(--line)}
+.admin-table td{padding:13px 18px;border-bottom:1px solid var(--line-soft);font-size:14.5px}
+.admin-table tr:last-child td{border-bottom:0}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:4px 11px;border-radius:99px}
+.status-pill.notstarted{background:#EEF1F4;color:var(--ink-faint)}
+.status-pill.inprogress{background:var(--coral-soft);color:var(--coral-deep)}
+.status-pill.completed{background:var(--success-soft);color:#1F5C3D}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ---------- admin: tabs & content management ---------- */
+.admin-tabs{display:flex;gap:4px;margin-top:14px}
+.admin-tab{background:none;border:0;padding:8px 4px;font-size:14.5px;font-weight:600;color:var(--ink-faint);border-bottom:2.5px solid transparent;margin-right:20px}
+.admin-tab.active{color:var(--coral-deep);border-bottom-color:var(--coral)}
+.admin-screen{display:none}
+.admin-screen.active{display:block}
+
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.section-head h2{font-size:19px}
+.btn-add{background:var(--coral);color:#fff;border:0;border-radius:var(--radius-sm);padding:10px 18px;font-size:14px;font-weight:600}
+.btn-add:hover{background:var(--coral-deep)}
+
+.client-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-bottom:10px}
+.client-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.client-card .chead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.client-card .clogo{width:34px;height:34px;border-radius:9px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:14px;overflow:hidden}
+.client-card .clogo img{width:100%;height:100%;object-fit:cover}
+.client-card h4{font-size:15px}
+.client-card .curl{font-size:12.5px;color:var(--ink-faint);margin-bottom:14px;font-family:monospace}
+.client-card .cactions{display:flex;gap:8px}
+.client-card .cactions button{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:500;color:var(--ink)}
+.client-card .cactions button:hover{border-color:var(--coral);color:var(--coral-deep)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin-top:18px}
+.panel h3{font-size:17px;margin-bottom:18px}
+.form-row{margin-bottom:16px}
+.form-row label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.form-row .hint{font-size:12px;color:var(--ink-faint);font-weight:400;margin-top:4px}
+.form-row input[type=text],.form-row textarea{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:var(--radius-sm);font-size:14.5px;font-family:var(--body);color:var(--ink)}
+.form-row input[type=text]:focus,.form-row textarea:focus{border-color:var(--coral);outline:none}
+.form-row textarea{resize:vertical;min-height:70px}
+.slug-preview{display:flex;align-items:center;gap:4px;font-size:13.5px;color:var(--ink-soft);margin-top:8px;font-family:monospace;background:var(--bg);padding:8px 12px;border-radius:8px}
+.slug-preview b{color:var(--coral-deep)}
+
+.upload-box{border:1.5px dashed var(--line);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;background:var(--bg)}
+.upload-box:hover{border-color:var(--coral)}
+.upload-box .uicon{font-size:22px;margin-bottom:6px}
+.upload-box .utext{font-size:13.5px;color:var(--ink-soft)}
+.upload-preview{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg)}
+.upload-preview img{width:90px;height:56px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
+.upload-preview .fname{font-size:13px;color:var(--ink-soft);flex:1}
+.upload-preview button{background:none;border:0;color:var(--ink-faint);font-size:12.5px;text-decoration:underline}
+
+.opt-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.opt-row input[type=radio]{width:17px;height:17px;accent-color:var(--success);flex-shrink:0}
+.opt-row input[type=text]{flex:1}
+
+.qdraft{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.qdraft .qbadge{font-size:11px;font-weight:700;background:var(--success-soft);color:#1F5C3D;padding:3px 9px;border-radius:99px;flex-shrink:0}
+.qdraft .qtxt{font-size:14px;flex:1}
+.qdraft .qshot{width:36px;height:24px;border-radius:5px;object-fit:cover;border:1px solid var(--line)}
+
+.btn-publish{background:var(--teal);color:#fff;border:0;border-radius:var(--radius-sm);padding:12px 22px;font-size:15px;font-weight:600;margin-top:16px}
+.btn-publish:hover{background:#175551}
+.publish-toast{display:none;align-items:center;gap:8px;background:var(--success-soft);color:#1F5C3D;padding:11px 16px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;margin-top:14px}
+.publish-toast.show{display:flex}
+
+/* ---------- client quiz management page ---------- */
+.back-link{background:none;border:0;color:var(--ink-soft);font-size:13.5px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.back-link:hover{color:var(--coral-deep)}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px 26px;margin-bottom:16px;box-shadow:var(--shadow);position:relative}
+.qcard-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.qcard-badge{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--success-soft);color:#1F5C3D}
+.qcard-badge.unpub{background:var(--line-soft);color:var(--ink-faint)}
+.qcard-remove{background:none;border:0;color:var(--ink-faint);font-size:15px;padding:2px 6px;border-radius:6px;line-height:1}
+.qcard-remove:hover{background:#FBEAE7;color:var(--coral-deep)}
+.qcard-question{width:100%;border:1.5px solid var(--line);background:var(--surface);font-family:var(--body);font-size:18px;font-weight:600;color:var(--ink);resize:vertical;min-height:30px;padding:10px 13px;border-radius:var(--radius-sm);margin-bottom:16px}
+.qcard-question:hover{border-color:#C9D0D8}
+.qcard-question:focus{border-color:var(--coral);outline:none;background:var(--bg)}
+.qcard-opt{display:flex;align-items:center;gap:10px;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:9px 14px;margin-bottom:8px}
+.qcard-opt.iscorrect{background:var(--success-soft);border-color:var(--success)}
+.qcard-opt input[type=radio]{width:16px;height:16px;accent-color:var(--success);flex-shrink:0}
+.qcard-opt input[type=text]{flex:1;border:0;background:none;font-size:14.5px;font-family:var(--body);color:var(--ink)}
+.qcard-opt input[type=text]:focus{outline:none}
+.qcard-explain{margin-top:14px;padding-top:16px;border-top:1px dashed var(--line)}
+.qcard-explain label{display:block;font-size:12px;font-weight:600;color:var(--ink-faint);margin-bottom:6px}
+.qcard-explain textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:10px 13px;font-size:14.5px;font-family:var(--body);color:var(--ink);min-height:70px;resize:vertical}
+.qcard-explain textarea:focus{border-color:var(--coral);outline:none}
+.qcard-shotwrap{margin-top:10px}
+.qcard-include{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13.5px;font-weight:500;color:var(--ink-soft)}
+.qcard-include input{width:16px;height:16px;accent-color:var(--coral)}
+
+/* ---------- glossary flashcards (admin) ---------- */
+.flashcard-row{display:grid;grid-template-columns:170px 1fr auto auto;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px}
+.flashcard-row input[type=text]{border:1.5px solid var(--line);border-radius:7px;padding:8px 10px;font-size:14px;font-family:var(--body);color:var(--ink)}
+.flashcard-row input[type=text]:focus{border-color:var(--coral);outline:none}
+.flashcard-row textarea{border:1.5px solid var(--line);border-radius:7px;padding:8px 10px;font-size:13.5px;font-family:var(--body);color:var(--ink);resize:vertical;min-height:38px}
+.flashcard-row textarea:focus{border-color:var(--coral);outline:none}
+.fc-include{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-soft);white-space:nowrap;padding-top:8px}
+.fc-include input{width:15px;height:15px;accent-color:var(--coral)}
+.fc-remove{background:none;border:0;color:var(--ink-faint);font-size:15px;padding:2px 6px;border-radius:6px;align-self:start}
+.fc-remove:hover{background:#FBEAE7;color:var(--coral-deep)}
+@media (max-width:640px){.flashcard-row{grid-template-columns:1fr}}
+
+/* ---------- glossary flashcards (learner) ---------- */
+.gloss-overlay{display:none;position:fixed;inset:0;background:rgba(27,36,48,.55);z-index:60;align-items:center;justify-content:center;padding:24px}
+.gloss-overlay.show{display:flex}
+.gloss-modal{background:var(--surface);border-radius:var(--radius);max-width:660px;width:100%;max-height:85vh;overflow-y:auto;padding:30px 32px;position:relative;box-shadow:var(--shadow)}
+.gloss-modal h2{font-size:21px;margin-bottom:4px}
+.gloss-modal .sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:22px}
+.gloss-close{position:absolute;top:18px;right:18px;background:none;border:0;font-size:20px;color:var(--ink-faint);cursor:pointer;line-height:1}
+.gloss-close:hover{color:var(--coral-deep)}
+.gloss-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.flashcard{perspective:1000px;height:130px;cursor:pointer}
+.flashcard-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.flashcard.flipped .flashcard-inner{transform:rotateY(180deg)}
+.flashcard-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:var(--radius-sm);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;padding:14px;text-align:center}
+.flashcard-front{background:var(--teal-soft);color:var(--teal);font-weight:700;font-size:16px}
+.flashcard-back{background:var(--surface);transform:rotateY(180deg);color:var(--ink-soft);font-size:13px;line-height:1.45}
+.gloss-empty{color:var(--ink-faint);font-style:italic;font-size:14px}
+
+/* ---------- signup/login toggle + errors ---------- */
+.auth-toggle{display:flex;gap:6px;margin:18px 0 4px;background:var(--bg);border-radius:10px;padding:4px}
+.auth-toggle-btn{flex:1;background:none;border:0;border-radius:7px;padding:8px 0;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+.auth-toggle-btn.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(27,36,48,.12)}
+.auth-error{color:var(--coral-deep);font-size:12.5px;margin:10px 0 0;background:#FBEAE7;border-radius:7px;padding:9px 11px;line-height:1.4}
+
+/* ---------- question type toggle ---------- */
+.qtype-toggle{display:flex;gap:6px;margin-bottom:14px}
+.qtype-btn{background:var(--bg);border:1.5px solid var(--line);color:var(--ink-soft);border-radius:99px;padding:6px 14px;font-size:12.5px;font-weight:600}
+.qtype-btn:hover{border-color:var(--coral)}
+.qtype-btn.active{background:var(--coral-soft);border-color:var(--coral);color:var(--coral-deep)}
+
+/* ---------- hotspot question editor (admin) ---------- */
+.hs-block{margin-top:2px}
+.hs-imgwrap{position:relative;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;user-select:none;background:var(--bg)}
+.hs-imgwrap img{display:block;width:100%;height:auto;pointer-events:none}
+.hs-admin-wrap.mode-select{cursor:default}
+.hs-admin-wrap.mode-draw,.hs-admin-wrap.mode-focus{cursor:crosshair}
+.hs-admin-wrap:focus{outline:none}
+.hs-region{position:absolute;border-radius:5px;box-sizing:border-box;border:2px solid var(--teal);background:rgba(31,111,107,.14)}
+.hs-region.correctpick{border-color:var(--success);background:rgba(47,133,88,.18)}
+.hs-region.selected{outline:2px solid var(--coral-deep);outline-offset:2px}
+.hs-region.grouped{outline:2px dashed var(--coral-deep);outline-offset:2px}
+.hs-region .hs-num{position:absolute;top:-9px;left:-9px;width:18px;height:18px;border-radius:50%;background:var(--teal);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5}
+.hs-region.correctpick .hs-num{background:var(--success)}
+.hs-drawing-box{position:absolute;border:2px dashed var(--teal);background:rgba(31,111,107,.1);pointer-events:none}
+.hs-marquee-box{position:absolute;border:1.5px dashed var(--teal);background:rgba(31,111,107,.08);pointer-events:none}
+.hs-focusbox{position:absolute;border:2.5px dashed #C6821E;background:rgba(198,130,30,.08);border-radius:6px}
+.hs-focusbox .hs-flabel{position:absolute;top:-22px;left:0;font-size:10.5px;font-weight:700;color:#8A5A10;background:#FCEFD8;padding:2px 8px;border-radius:5px;letter-spacing:.02em}
+.hs-focusbox.selected{outline:2px solid var(--coral-deep);outline-offset:2px}
+.hs-resize-handle{position:absolute;width:11px;height:11px;background:#fff;border:2px solid var(--teal);border-radius:50%;z-index:10}
+.hs-focusbox .hs-resize-handle{border-color:#C6821E}
+.hs-resize-handle.ne{top:-6px;right:-6px;cursor:nesw-resize}
+.hs-resize-handle.sw{bottom:-6px;left:-6px;cursor:nesw-resize}
+.hs-resize-handle.se{bottom:-6px;right:-6px;cursor:nwse-resize}
+.hs-admin-wrap.mode-select .hs-region,.hs-admin-wrap.mode-select .hs-focusbox{cursor:move}
+.hs-tools{display:flex;gap:6px;margin:12px 0;flex-wrap:wrap}
+.hs-tool-btn{background:var(--bg);border:1.5px solid var(--line);color:var(--ink-soft);border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600}
+.hs-tool-btn:hover{border-color:var(--teal)}
+.hs-tool-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.hs-tool-btn.active.focus-active{background:#C6821E;border-color:#C6821E}
+.hs-tool-btn .k{opacity:.65;font-weight:400}
+.hs-region-list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.hs-region-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+.hs-region-row .rn{font-weight:600;width:20px}
+.hs-region-row label{display:flex;align-items:center;gap:5px;color:var(--ink-soft);cursor:pointer}
+.hs-region-row .del{margin-left:auto;background:none;border:0;color:var(--ink-faint);cursor:pointer;font-size:13px}
+.hs-region-row .del:hover{color:var(--coral-deep)}
+.hs-empty-note{font-size:12.5px;color:var(--ink-faint);margin-top:10px}
+.hs-clear-btn,.hs-focus-remove{margin-top:10px;margin-right:8px;background:none;border:1px solid var(--line);border-radius:7px;padding:7px 13px;font-size:12.5px;font-weight:500;color:var(--ink-soft)}
+.hs-clear-btn:hover,.hs-focus-remove:hover{border-color:var(--coral);color:var(--coral-deep)}
+.hs-focus-remove{border:0;text-decoration:underline;text-underline-offset:2px;padding:0;margin-top:10px}
+
+/* ---------- hotspot question (learner-facing) ---------- */
+.hs-hotspot{position:absolute;border-radius:6px;border:2px solid transparent;background:transparent;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.hs-hotspot:hover{background:rgba(31,111,107,.14);border-color:rgba(31,111,107,.45)}
+.hs-hotspot.tried-wrong{background:rgba(225,80,61,.16);border-color:var(--coral);cursor:not-allowed;pointer-events:none}
+.hs-hotspot.is-correct{background:rgba(47,133,88,.2);border-color:var(--success);pointer-events:none}
+.hs-hotspot.shake{animation:hsshake .4s ease}
+.hs-hotspot.pop{animation:hspop .45s ease}
+@keyframes hsshake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes hspop{0%{transform:scale(1)}45%{transform:scale(1.06)}100%{transform:scale(1)}}
+.hs-badge{position:absolute;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;opacity:0;transition:opacity .2s ease, transform .3s ease;transform:scale(.5)}
+.hs-badge.show{opacity:1;transform:scale(1)}
+.hs-badge.wrong{background:var(--coral)}
+.hs-badge.right{background:var(--success)}
+.hs-learner-focusbox{position:absolute;border-radius:8px;pointer-events:none;border:3px solid #E6961E;animation:hsfocuspulse 1.8s ease-in-out infinite}
+@keyframes hsfocuspulse{0%,100%{box-shadow:0 0 0 0 rgba(230,150,30,.55)}50%{box-shadow:0 0 0 9px rgba(230,150,30,0)}}
+@media (prefers-reduced-motion:reduce){.hs-learner-focusbox{animation:none;box-shadow:0 0 0 4px rgba(230,150,30,.35)}}
+
+/* ---------- confirmation modal ---------- */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,36,48,.5);z-index:100;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--surface);border-radius:16px;padding:28px 28px 24px;max-width:420px;width:100%;border-top:5px solid var(--ink-faint)}
+.modal-box.danger{border-top-color:var(--coral)}
+.modal-box h3{font-size:18px;margin-bottom:10px}
+.modal-box p{font-size:14.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:6px}
+.modal-box .danger-text{color:var(--coral-deep);font-weight:600}
+.modal-typeconfirm{margin-top:14px}
+.modal-typeconfirm label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
+.modal-typeconfirm input{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:var(--radius-sm);font-size:14px}
+.modal-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+.modal-actions button{border-radius:var(--radius-sm);padding:10px 18px;font-size:14px;font-weight:600}
+.modal-cancel{background:none;border:1.5px solid var(--line);color:var(--ink)}
+.modal-cancel:hover{border-color:#C9D0D8}
+.modal-confirm{background:var(--ink);border:0;color:#fff}
+.modal-confirm:hover{background:#0F1620}
+.modal-confirm.danger{background:var(--coral)}
+.modal-confirm.danger:hover{background:var(--coral-deep)}
+.modal-confirm:disabled{background:#D7DBE0;cursor:not-allowed}
+
+/* ---------- client card overflow + archive ---------- */
+.client-card{position:relative}
+.card-more-btn{position:absolute;top:16px;right:16px;background:none;border:0;color:var(--ink-faint);font-size:16px;padding:4px 8px;border-radius:6px;line-height:1}
+.card-more-btn:hover{background:var(--bg);color:var(--ink)}
+.card-menu{display:none;position:absolute;top:44px;right:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:5;min-width:150px;overflow:hidden}
+.card-menu.show{display:block}
+.card-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 14px;font-size:13.5px;color:var(--ink)}
+.card-menu button:hover{background:var(--bg)}
+.card-menu button.danger{color:var(--coral-deep)}
+.archived-note{font-size:13px;color:var(--ink-faint);margin-top:6px;margin-bottom:18px}
+.archived-link{background:none;border:0;color:var(--ink-soft);font-size:13.5px;font-weight:500;text-decoration:underline;margin-top:6px}
+.archived-link:hover{color:var(--coral-deep)}
+
+/* mobile */
+.menubtn{display:none}
+@media (max-width:880px){
+  .shell.active{grid-template-columns:1fr}
+  .sidebar{position:fixed;z-index:40;width:272px;left:0;top:0;transform:translateX(-100%);transition:transform .2s}
+  .sidebar.open{transform:translateX(0)}
+  .menubtn{display:inline-flex;background:var(--ink);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
+  .page{padding:32px 20px 80px}
+  .topbar{padding:14px 20px}
+  .page h1{font-size:27px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ SIGN-IN SCREEN ============ -->
+<div class="signin-screen" id="signinScreen">
+  <div class="signin-card">
+    <div class="client-brand">
+      <div class="client-logo" id="signinClientLogo">AH</div>
+      <span class="cname" id="signinClientName">April Housing</span>
+    </div>
+    <h1>Welcome to Banner University</h1>
+    <p class="sub">A few short lessons to get comfortable with Banner. Enter your details to get started.</p>
+
+    <div class="auth-toggle" id="authToggle">
+      <button type="button" class="auth-toggle-btn active" data-mode="signup">Sign up</button>
+      <button type="button" class="auth-toggle-btn" data-mode="login">Log in</button>
+    </div>
+
+    <form id="signinForm">
+      <div class="field" id="fullnameField">
+        <label for="fullname">Full name</label>
+        <input id="fullname" type="text" placeholder="e.g. Jordan Reyes">
+      </div>
+      <div class="field">
+        <label for="workemail">Work email</label>
+        <input id="workemail" type="email" placeholder="you@aprilhousing.com" required>
+      </div>
+      <p class="auth-error" id="authError" style="display:none"></p>
+      <button type="submit" class="btn-primary" id="authSubmitBtn">Sign up</button>
+    </form>
+    <p class="signin-note" id="previewNote" style="display:none"></p>
+    <p class="signin-note">Your progress is saved to your account automatically.</p>
+  </div>
+</div>
+
+<!-- ============ INVALID LINK SCREEN ============ -->
+<div class="signin-screen" id="invalidLinkScreen" style="display:none">
+  <div class="signin-card">
+    <h1>This link isn't valid</h1>
+    <p class="sub">Please check the link with your training administrator, or ask them to resend it.</p>
+  </div>
+</div>
+
+<!-- ============ ADMIN ACCESS GATE ============ -->
+<div class="signin-screen" id="adminGateScreen" style="display:none">
+  <div class="signin-card">
+    <h1>Admin access</h1>
+    <p class="sub">Enter the admin password to continue.</p>
+    <form id="adminGateForm">
+      <div class="field">
+        <label for="adminPassword">Password</label>
+        <input id="adminPassword" type="password" placeholder="••••••••" required>
+      </div>
+      <p class="auth-error" id="adminGateError" style="display:none">Incorrect password.</p>
+      <button type="submit" class="btn-primary">Enter</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div class="shell" id="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="client-logo" id="sbClientLogo">AH</div>
+      <span class="cname" id="sbClientName">April Housing</span>
+    </div>
+    <div class="sb-title">
+      <div class="label">You're taking</div>
+      <h2>Banner University</h2>
+    </div>
+    <div class="sb-user">
+      <div class="uname" id="sbUserName">Jordan Reyes</div>
+      <div class="uemail" id="sbUserEmail">jordan@aprilhousing.com</div>
+      <button id="switchUser" type="button">Not you? Switch</button>
+    </div>
+    <div class="sb-progress">
+      <div class="toprow"><span>Your progress</span><span id="pctLabel">17%</span></div>
+      <div class="bar"><div id="pbar" style="width:17%"></div></div>
+    </div>
+    <nav class="sb-nav" id="sbNav">
+      <div class="navlabel">Contents</div>
+      <button class="navitem done" data-page="intro">Getting started<span class="tick">✓</span></button>
+      <button class="navitem active" data-page="quiz">Your dashboard<span class="tick">✓</span></button>
+      <button class="navitem" data-page="projects">Adding a project<span class="tick">✓</span></button>
+      <button class="navitem" data-page="bidding">Bidding & vendors<span class="tick">✓</span></button>
+      <button class="navitem" data-page="approvals">Approvals<span class="tick">✓</span></button>
+      <button class="navitem" data-page="reports">Reports<span class="tick">✓</span></button>
+    </nav>
+    <div class="sb-foot">
+      <button class="sb-footbtn" id="glossBtn" type="button">📖 Glossary reference</button>
+      <button class="sb-footbtn danger" id="resetBtn" type="button">Reset my progress</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <button class="menubtn" id="menuBtn">☰ Menu</button>
+      <span class="crumb">Your dashboard</span>
+      <span class="pct">17% complete</span>
+    </div>
+    <div class="page" id="page">
+      <div class="eyebrow">Module 2</div>
+      <h1>Finding your way around the dashboard</h1>
+      <p class="lede">Everything in Banner starts here — filter to a property, switch views, and jump into any project from one screen.</p>
+      <p>Take a moment to look at the layout: the filter bar sits across the top, and the main table below it lists whatever you've filtered to. You'll spend most of your time in this view.</p>
+
+      <div id="learnerQuizList"></div>
+
+      <div class="modfooter">
+        <button class="btn-next" id="completeBtn" disabled>Mark complete</button>
+        <span class="gatehint" id="gateHint">Answer the question above to continue</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ ADMIN VIEW ============ -->
+<div class="admin" id="adminView">
+  <div class="admin-top">
+    <button class="admin-back-btn" id="adminBackToLogin">← Log out</button>
+    <h1>Banner University — Admin</h1>
+    <p>Manage clients, quizzes, and view onboarding progress</p>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="progress">Progress</button>
+      <button class="admin-tab" data-tab="clients">Clients</button>
+      <button class="admin-tab" data-tab="archived">Archived</button>
+    </div>
+  </div>
+
+  <div class="admin-wrap">
+  <div class="admin-screen active" id="screenProgress">
+    <div class="admin-cards">
+      <div class="admin-card"><div class="mlabel">Total users</div><div class="mval">17</div></div>
+      <div class="admin-card"><div class="mlabel">Completed</div><div class="mval">6</div></div>
+      <div class="admin-card"><div class="mlabel">In progress</div><div class="mval">8</div></div>
+      <div class="admin-card"><div class="mlabel">Not started</div><div class="mval">3</div></div>
+    </div>
+
+    <div class="client-group">
+      <div class="client-group-head">
+        <div class="clogo">AH</div><h3>April Housing</h3><span class="ccount">6 users</span>
+      </div>
+      <table class="admin-table">
+        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+        <tr><td>Jordan Reyes</td><td>jordan@aprilhousing.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+        <tr><td>Priya Nair</td><td>priya@aprilhousing.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td>Sam Walsh</td><td>sam@aprilhousing.com</td><td><span class="status-pill notstarted"><span class="dot"></span>Not started</span></td></tr>
+        <tr><td>Casey Dunn</td><td>casey@aprilhousing.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+        <tr><td>Morgan Lee</td><td>morgan@aprilhousing.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td>Alex Kim</td><td>alex@aprilhousing.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+      </table>
+    </div>
+
+    <div class="client-group">
+      <div class="client-group-head">
+        <div class="clogo">MP</div><h3>Morgan Properties</h3><span class="ccount">6 users</span>
+      </div>
+      <table class="admin-table">
+        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+        <tr><td>Taylor Brooks</td><td>taylor@morgan.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td>Jamie Fox</td><td>jamie@morgan.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+        <tr><td>Riley Chen</td><td>riley@morgan.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+        <tr><td>Drew Patel</td><td>drew@morgan.com</td><td><span class="status-pill notstarted"><span class="dot"></span>Not started</span></td></tr>
+        <tr><td>Sky Rivera</td><td>sky@morgan.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td>Quinn Ortiz</td><td>quinn@morgan.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+      </table>
+    </div>
+
+    <div class="client-group">
+      <div class="client-group-head">
+        <div class="clogo">CH</div><h3>Clear Height</h3><span class="ccount">5 users</span>
+      </div>
+      <table class="admin-table">
+        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+        <tr><td>Harper Voss</td><td>harper@clearheight.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td>Reese Gallo</td><td>reese@clearheight.com</td><td><span class="status-pill notstarted"><span class="dot"></span>Not started</span></td></tr>
+        <tr><td>Emerson Diaz</td><td>emerson@clearheight.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+        <tr><td>Finley Cruz</td><td>finley@clearheight.com</td><td><span class="status-pill completed"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td>Rowan Blake</td><td>rowan@clearheight.com</td><td><span class="status-pill inprogress"><span class="dot"></span>In progress</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <!-- /screenProgress -->
+
+  <div class="admin-screen" id="screenClients">
+    <div class="section-head">
+      <h2>Clients</h2>
+      <button class="btn-add" id="showAddClient">+ Add client</button>
+    </div>
+    <div class="client-cards" id="clientCardsList"></div>
+
+    <div class="panel" id="addClientPanel" style="display:none">
+      <h3 id="clientPanelTitle">Add a new client</h3>
+      <div class="form-row">
+        <label for="newClientName">Client name</label>
+        <input type="text" id="newClientName" placeholder="e.g. April Housing">
+        <div class="slug-preview">Their site will be at: yourdomain.com/<b id="slugPreview">clientname</b></div>
+      </div>
+      <div class="form-row">
+        <label>Logo</label>
+        <div class="upload-box" id="logoUploadBox">
+          <div class="uicon">🖼️</div>
+          <div class="utext">Click to upload a logo (PNG or SVG)</div>
+        </div>
+        <input type="file" id="logoFileInput" accept="image/*" style="display:none">
+        <div id="logoPreviewWrap"></div>
+      </div>
+      <button class="btn-add" id="saveClientBtn">Save client</button>
+      <div class="publish-toast" id="clientSavedToast">✓ Client added — their site is live at the URL above</div>
+    </div>
+  </div>
+  <!-- /screenClients -->
+
+  <div class="admin-screen" id="screenArchived">
+    <div class="section-head"><h2>Archived clients</h2></div>
+    <p class="archived-note">Archived clients' sites go offline, but nothing is deleted — restore any of them anytime.</p>
+    <div class="client-cards" id="archivedCardsList"></div>
+  </div>
+  <!-- /screenArchived -->
+
+  <div class="admin-screen" id="screenQuizzes">
+    <button class="back-link" id="backToClients">← Back to clients</button>
+    <div class="section-head">
+      <h2>Managing quiz — <span id="quizClientName">April Housing</span></h2>
+    </div>
+
+    <div id="qcardList">
+      <!-- question cards injected here -->
+    </div>
+
+    <button class="btn-add" id="addQuestionCardBtn" style="margin-bottom:20px">+ Add question</button>
+
+    <hr class="divider" style="margin:36px 0 24px">
+    <div class="section-head">
+      <h2>Glossary flashcards</h2>
+    </div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:16px">Term/definition pairs learners can flip through from the "📖 Glossary reference" button.</p>
+    <div id="glossCardList">
+      <!-- flashcard rows injected here -->
+    </div>
+    <button class="btn-add" id="addFlashcardBtn" style="margin-bottom:20px">+ Add flashcard</button>
+    <br>
+    <button class="btn-publish" id="publishQuizBtn">Publish</button>
+    <div class="publish-toast" id="quizPublishedToast">✓ Published — changes are live on their site now</div>
+  </div>
+  <!-- /screenQuizzes -->
+  </div>
+</div>
+
+<div class="gloss-overlay" id="glossOverlay">
+  <div class="gloss-modal">
+    <button class="gloss-close" id="glossCloseBtn" type="button">✕</button>
+    <h2>📖 Glossary reference</h2>
+    <p class="sub">Click a card to flip it and see the definition.</p>
+    <div class="gloss-grid" id="glossGrid"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox">
+    <h3 id="modalTitle"></h3>
+    <p id="modalBody"></p>
+    <div class="modal-typeconfirm" id="modalTypeConfirmWrap" style="display:none">
+      <label id="modalTypeConfirmLabel"></label>
+      <input type="text" id="modalTypeConfirmInput">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="modalCancelBtn">Cancel</button>
+      <button class="modal-confirm" id="modalConfirmBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('adminBackToLogin').addEventListener('click', ()=>{
+  document.getElementById('adminView').classList.remove('active');
+  document.getElementById('adminPassword').value='';
+  document.getElementById('adminGateError').style.display='none';
+  document.getElementById('adminGateScreen').style.display='flex';
+});
+</script>
+<script>
+document.getElementById('menuBtn').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+function renderLearnerQuiz(){
+  const questions = (sampleQuizzes['April Housing']||[]).filter(q=>q.published);
+  const container = document.getElementById('learnerQuizList');
+  container.innerHTML = '';
+  const answered = new Set();
+
+  function checkAllAnswered(){
+    const completeBtn = document.getElementById('completeBtn');
+    const gateHint = document.getElementById('gateHint');
+    if(questions.length===0){
+      completeBtn.disabled = false;
+      gateHint.textContent = '';
+    } else if(answered.size >= questions.length){
+      completeBtn.disabled = false;
+      gateHint.textContent = '';
+    } else {
+      completeBtn.disabled = true;
+      gateHint.textContent = `Answer the question${questions.length>1?'s':''} above to continue (${answered.size}/${questions.length})`;
+    }
+  }
+
+  if(questions.length===0){
+    container.innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">No questions published yet for this module.</p></div>`;
+    checkAllAnswered();
+    return;
+  }
+
+  questions.forEach((q,qi)=>{
+    const block = document.createElement('div');
+    block.className = 'quiz';
+
+    if(q.type==='hotspot'){
+      block.innerHTML = `
+        <div class="qtag">Quick check</div>
+        <div class="qtext">${q.question||''}</div>
+        ${q.image
+          ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${q.image}"></div>`
+          : `<p style="color:var(--ink-faint);font-style:italic">This question isn't fully set up yet — no screenshot uploaded.</p>`}
+        <div class="explain" id="learnerExplain${qi}">
+          <span class="tag">Correct</span>
+          <p>${q.explanation || 'Nice job — that is the right spot.'}</p>
+        </div>`;
+      container.appendChild(block);
+
+      if(q.image){
+        const wrap = block.querySelector(`#learnerHs${qi}`);
+        let solved = false;
+        if(q.focusArea){
+          const fb = document.createElement('div');
+          fb.className = 'hs-learner-focusbox';
+          fb.style.left=q.focusArea.x+'%'; fb.style.top=q.focusArea.y+'%'; fb.style.width=q.focusArea.w+'%'; fb.style.height=q.focusArea.h+'%';
+          wrap.appendChild(fb);
+        }
+        const built = (q.regions||[]).map(r=>{
+          const el = document.createElement('div');
+          el.className = 'hs-hotspot';
+          el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
+          wrap.appendChild(el);
+          const badge = document.createElement('div');
+          badge.className = 'hs-badge';
+          badge.style.left = `calc(${r.x + r.w}% - 10px)`;
+          badge.style.top = `calc(${r.y}% - 10px)`;
+          wrap.appendChild(badge);
+          return {r, el, badge};
+        });
+        built.forEach(({r,el,badge})=>{
+          el.addEventListener('click', ()=>{
+            if(solved || el.dataset.tried) return;
+            if(r.correct){
+              solved = true;
+              built.forEach(other=>{
+                if(other.r.correct){
+                  other.el.classList.add('is-correct');
+                  other.badge.classList.add('show','right'); other.badge.textContent='✓';
+                  if(other.el===el) other.el.classList.add('pop');
+                }
+                other.el.style.pointerEvents = 'none';
+              });
+              block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+              answered.add(qi);
+              checkAllAnswered();
+            } else {
+              el.dataset.tried = '1';
+              el.classList.add('tried-wrong','shake');
+              badge.classList.add('show','wrong'); badge.textContent='✕';
+              setTimeout(()=>el.classList.remove('shake'), 400);
+            }
+          });
+        });
+      } else {
+        answered.add(qi); // nothing to answer — don't block completion on an unfinished question
+      }
+    } else {
+      const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"><span class="dot"></span> ${opt}</button>`).join('');
+      block.innerHTML = `
+        <div class="qtag">Quick check</div>
+        <div class="qtext">${q.question||''}</div>
+        <div class="qopts-${qi}">${opts}</div>
+        <div class="explain" id="learnerExplain${qi}">
+          <span class="tag">Correct</span>
+          <p>${q.explanation||''}</p>
+        </div>`;
+      container.appendChild(block);
+      block.querySelectorAll(`.qopts-${qi} .opt`).forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          block.querySelectorAll(`.qopts-${qi} .opt`).forEach(b=>b.disabled=true);
+          const correct = btn.dataset.correct === 'true';
+          btn.classList.add(correct ? 'correct' : 'wrong');
+          if(!correct){
+            block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`).classList.add('correct');
+          }
+          block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+          answered.add(qi);
+          checkAllAnswered();
+        });
+      });
+    }
+  });
+
+  checkAllAnswered();
+}
+
+function renderGlossary(){
+  const grid = document.getElementById('glossGrid');
+  const terms = (sampleGlossary['April Housing']||[]).filter(f=>f.published && f.term && f.definition);
+  if(terms.length===0){
+    grid.innerHTML = `<p class="gloss-empty">No flashcards published yet.</p>`;
+    return;
+  }
+  grid.innerHTML = terms.map(f=>`
+    <div class="flashcard">
+      <div class="flashcard-inner">
+        <div class="flashcard-face flashcard-front">${f.term}</div>
+        <div class="flashcard-face flashcard-back">${f.definition}</div>
+      </div>
+    </div>`).join('');
+  grid.querySelectorAll('.flashcard').forEach(card=>{
+    card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+  });
+}
+
+document.getElementById('glossBtn').addEventListener('click', ()=>{
+  renderGlossary();
+  document.getElementById('glossOverlay').classList.add('show');
+});
+document.getElementById('glossCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('glossOverlay').classList.remove('show');
+});
+document.getElementById('glossOverlay').addEventListener('click', (e)=>{
+  if(e.target.id==='glossOverlay') document.getElementById('glossOverlay').classList.remove('show');
+});
+
+document.querySelectorAll('.navitem').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.navitem').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+document.getElementById('switchUser').addEventListener('click', ()=>{
+  document.getElementById('shell').classList.remove('active');
+  if(currentClient) localStorage.removeItem(sessionKeyFor(currentClient.slug));
+  document.getElementById('signinScreen').style.display='flex';
+});
+
+/* ---- admin tabs ---- */
+function showAdminTab(name){
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.admin-screen').forEach(s=>s.classList.remove('active'));
+  const map = {progress:'screenProgress', clients:'screenClients', archived:'screenArchived', quizzes:'screenQuizzes'};
+  document.getElementById(map[name]).classList.add('active');
+  if(name==='clients') renderClientCards();
+  if(name==='archived') renderArchivedCards();
+}
+document.querySelectorAll('.admin-tab').forEach(t=>{
+  t.addEventListener('click', ()=> showAdminTab(t.dataset.tab));
+});
+
+/* ---- generic confirmation modal ---- */
+function openModal({title, body, danger, confirmText, typeConfirmValue, onConfirm}){
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalBox').classList.toggle('danger', !!danger);
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  confirmBtn.textContent = confirmText || 'Confirm';
+  confirmBtn.classList.toggle('danger', !!danger);
+  const typeWrap = document.getElementById('modalTypeConfirmWrap');
+  const typeInput = document.getElementById('modalTypeConfirmInput');
+  if(typeConfirmValue){
+    typeWrap.style.display='block';
+    document.getElementById('modalTypeConfirmLabel').textContent = `Type "${typeConfirmValue}" to confirm`;
+    typeInput.value=''; confirmBtn.disabled = true;
+    typeInput.oninput = ()=>{ confirmBtn.disabled = (typeInput.value !== typeConfirmValue); };
+  } else {
+    typeWrap.style.display='none'; confirmBtn.disabled = false;
+  }
+  overlay.classList.add('show');
+  confirmBtn.onclick = ()=>{ overlay.classList.remove('show'); onConfirm(); };
+  document.getElementById('modalCancelBtn').onclick = ()=> overlay.classList.remove('show');
+}
+
+/* ---- client data model ---- */
+let clients = [
+  {name:'April Housing', slug:'aprilhousing', initials:'AH', logo:null, archived:false},
+  {name:'Morgan Properties', slug:'morgan', initials:'MP', logo:null, archived:false},
+  {name:'Clear Height', slug:'clearheight', initials:'CH', logo:null, archived:false}
+];
+let editingIndex = null;
+
+function slugify(name){ return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,''); }
+
+/* ---------- multi-tenant routing (client-specific links + admin gate) ---------- */
+const ADMIN_ACCESS_CODE = 'banner-admin-2026'; // soft, client-side gate only — see chat notes
+let currentClient = null;
+let authMode = 'signup';
+
+function pathFirstSegment(){
+  if(!location.hostname) return null; // no real domain — local file or an in-app preview, not a live deployment
+  if(/\.html?$/i.test(location.pathname)) return null; // still pointing at a raw file, not a clean route
+  const seg = location.pathname.split('/').filter(Boolean)[0];
+  return seg ? seg.toLowerCase() : null;
+}
+function routedAdmin(){
+  return pathFirstSegment()==='banneradminview' || new URLSearchParams(location.search).get('admin')==='1';
+}
+function routedSlug(){
+  const seg = pathFirstSegment();
+  if(seg && seg!=='banneradminview') return seg;
+  return (new URLSearchParams(location.search).get('client')||'').toLowerCase() || null;
+}
+
+function usersDB(){
+  try { return JSON.parse(localStorage.getItem('banner_users_db')||'[]'); }
+  catch(e){ return []; }
+}
+function saveUsersDB(list){ localStorage.setItem('banner_users_db', JSON.stringify(list)); }
+function sessionKeyFor(slug){ return 'banner_session_'+slug; }
+
+function brandSigninFor(client){
+  document.getElementById('signinClientLogo').textContent = client.initials;
+  document.getElementById('signinClientName').textContent = client.name;
+  document.getElementById('workemail').placeholder = `you@${client.slug}.com`;
+}
+function brandSidebarFor(client){
+  document.getElementById('sbClientLogo').textContent = client.initials;
+  document.getElementById('sbClientName').textContent = client.name;
+}
+
+function showShellForUser(client, user){
+  document.getElementById('signinScreen').style.display='none';
+  document.getElementById('invalidLinkScreen').style.display='none';
+  brandSidebarFor(client);
+  document.getElementById('sbUserName').textContent = user.name || user.email;
+  document.getElementById('sbUserEmail').textContent = user.email;
+  document.getElementById('shell').classList.add('active');
+  currentClient = client;
+  renderLearnerQuiz();
+  renderGlossary();
+}
+
+function setAuthMode(mode){
+  authMode = mode;
+  document.querySelectorAll('.auth-toggle-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+  document.getElementById('fullnameField').style.display = mode==='signup' ? '' : 'none';
+  document.getElementById('authSubmitBtn').textContent = mode==='signup' ? 'Sign up' : 'Log in';
+  document.getElementById('authError').style.display='none';
+}
+document.querySelectorAll('.auth-toggle-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> setAuthMode(btn.dataset.mode));
+});
+
+document.getElementById('signinForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const errorEl = document.getElementById('authError');
+  errorEl.style.display='none';
+  const email = document.getElementById('workemail').value.trim();
+  const name = document.getElementById('fullname').value.trim();
+  const db = usersDB();
+
+  if(authMode==='signup'){
+    const dup = db.find(u=>u.email.toLowerCase()===email.toLowerCase());
+    if(dup){
+      errorEl.textContent = 'This email is already registered. Try logging in instead.';
+      errorEl.style.display='block';
+      return;
+    }
+    const user = { name, email, client: currentClient.name, role:'learner', createdAt: new Date().toISOString() };
+    db.push(user);
+    saveUsersDB(db);
+    localStorage.setItem(sessionKeyFor(currentClient.slug), email);
+    showShellForUser(currentClient, user);
+  } else {
+    const user = db.find(u=>u.email.toLowerCase()===email.toLowerCase());
+    if(!user){
+      errorEl.textContent = "We couldn't find an account with that email. Click Sign up above to create one.";
+      errorEl.style.display='block';
+      return;
+    }
+    if(user.client !== currentClient.name){
+      errorEl.textContent = `That email isn't registered for ${currentClient.name}. Check you're using the right link.`;
+      errorEl.style.display='block';
+      return;
+    }
+    localStorage.setItem(sessionKeyFor(currentClient.slug), email);
+    showShellForUser(currentClient, user);
+  }
+});
+
+document.getElementById('adminGateForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const val = document.getElementById('adminPassword').value;
+  const errEl = document.getElementById('adminGateError');
+  if(val === ADMIN_ACCESS_CODE){
+    errEl.style.display='none';
+    document.getElementById('adminGateScreen').style.display='none';
+    document.getElementById('adminView').classList.add('active');
+  } else {
+    errEl.style.display='block';
+  }
+});
+
+function bootstrapRoute(){
+  if(routedAdmin()){
+    document.getElementById('signinScreen').style.display='none';
+    document.getElementById('adminGateScreen').style.display='flex';
+    return;
+  }
+
+  const slug = routedSlug();
+  const match = slug ? clients.find(c=>!c.archived && c.slug===slug) : null;
+
+  if(slug && !match){
+    document.getElementById('signinScreen').style.display='none';
+    document.getElementById('invalidLinkScreen').style.display='flex';
+    return;
+  }
+
+  currentClient = match || clients[0];
+  brandSigninFor(currentClient);
+
+  if(!slug){
+    const note = document.getElementById('previewNote');
+    note.style.display='block';
+    note.textContent = `Preview mode — no client link detected. Showing ${currentClient.name}. Real links look like yourdomain.com/${currentClient.slug}.`;
+  }
+
+  const remembered = localStorage.getItem(sessionKeyFor(currentClient.slug));
+  if(remembered){
+    const user = usersDB().find(u=>u.email.toLowerCase()===remembered.toLowerCase() && u.client===currentClient.name);
+    if(user){ showShellForUser(currentClient, user); return; }
+    localStorage.removeItem(sessionKeyFor(currentClient.slug));
+  }
+  document.getElementById('signinScreen').style.display='flex';
+}
+bootstrapRoute();
+
+function clientCardTemplate(c, idx){
+  const logo = c.logo ? `<img src="${c.logo}">` : c.initials;
+  return `<div class="client-card" data-idx="${idx}">
+    <button class="card-more-btn" type="button" data-role="morebtn">⋯</button>
+    <div class="card-menu" data-role="cardmenu">
+      <button type="button" data-role="archivebtn">Archive</button>
+      <button type="button" class="danger" data-role="deletebtn">Delete permanently</button>
+    </div>
+    <div class="chead"><div class="clogo">${logo}</div><h4>${c.name}</h4></div>
+    <div class="curl">yourdomain.com/${c.slug}</div>
+    <div class="cactions"><button type="button" data-role="managequizzes">Manage quizzes</button><button type="button" data-role="editbtn">Edit</button></div>
+  </div>`;
+}
+function archivedCardTemplate(c, idx){
+  const logo = c.logo ? `<img src="${c.logo}">` : c.initials;
+  return `<div class="client-card" data-idx="${idx}">
+    <div class="chead"><div class="clogo">${logo}</div><h4>${c.name}</h4></div>
+    <div class="curl">yourdomain.com/${c.slug}</div>
+    <div class="cactions"><button type="button" data-role="restorebtn" style="flex:1">Restore</button></div>
+  </div>`;
+}
+function renderClientCards(){
+  document.getElementById('clientCardsList').innerHTML = clients.map((c,i)=>!c.archived?clientCardTemplate(c,i):'').join('');
+}
+function renderArchivedCards(){
+  const archived = clients.map((c,i)=>({c,i})).filter(x=>x.c.archived);
+  document.getElementById('archivedCardsList').innerHTML = archived.length
+    ? archived.map(x=>archivedCardTemplate(x.c,x.i)).join('')
+    : `<p style="color:var(--ink-faint);font-size:14px">Nothing archived right now.</p>`;
+}
+renderClientCards();
+
+/* ---- client card actions (delegated) ---- */
+document.getElementById('clientCardsList').addEventListener('click', (e)=>{
+  const cardEl = e.target.closest('.client-card'); if(!cardEl) return;
+  const idx = +cardEl.dataset.idx;
+  const c = clients[idx];
+
+  if(e.target.dataset.role === 'morebtn'){
+    document.querySelectorAll('.card-menu.show').forEach(m=>{ if(m!==cardEl.querySelector('[data-role="cardmenu"]')) m.classList.remove('show'); });
+    cardEl.querySelector('[data-role="cardmenu"]').classList.toggle('show');
+    return;
+  }
+  if(e.target.dataset.role === 'managequizzes'){
+    loadClientQuiz(c.name);
+    loadClientGlossary(c.name);
+    showAdminTab('quizzes');
+    return;
+  }
+  if(e.target.dataset.role === 'editbtn'){
+    editingIndex = idx;
+    document.getElementById('clientPanelTitle').textContent = 'Edit client';
+    document.getElementById('newClientName').value = c.name;
+    document.getElementById('slugPreview').textContent = c.slug;
+    document.getElementById('logoPreviewWrap').innerHTML = c.logo ? `<div class="upload-preview" style="margin-top:10px"><img src="${c.logo}"><span class="fname">Current logo</span></div>` : '';
+    document.getElementById('saveClientBtn').textContent = 'Save changes';
+    document.getElementById('addClientPanel').style.display='block';
+    document.getElementById('addClientPanel').scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  if(e.target.dataset.role === 'archivebtn'){
+    cardEl.querySelector('[data-role="cardmenu"]').classList.remove('show');
+    openModal({
+      title:`Archive ${c.name}?`,
+      body:`Their onboarding site will go offline immediately. Nothing is deleted — you can restore them anytime from the Archived tab.`,
+      confirmText:'Archive client',
+      onConfirm:()=>{ c.archived = true; renderClientCards(); }
+    });
+    return;
+  }
+  if(e.target.dataset.role === 'deletebtn'){
+    cardEl.querySelector('[data-role="cardmenu"]').classList.remove('show');
+    openModal({
+      title:`Delete ${c.name} permanently?`,
+      body:`<span class="danger-text">This cannot be undone.</span> Their site, all quiz content, and every user's progress will be permanently deleted right away.`,
+      danger:true, confirmText:'Delete permanently', typeConfirmValue:c.name,
+      onConfirm:()=>{ clients.splice(idx,1); delete sampleQuizzes[c.name]; renderClientCards(); }
+    });
+    return;
+  }
+});
+document.getElementById('archivedCardsList').addEventListener('click', (e)=>{
+  const cardEl = e.target.closest('.client-card'); if(!cardEl) return;
+  if(e.target.dataset.role === 'restorebtn'){
+    clients[+cardEl.dataset.idx].archived = false;
+    renderArchivedCards();
+  }
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('[data-role="morebtn"]') && !e.target.closest('[data-role="cardmenu"]')){
+    document.querySelectorAll('.card-menu.show').forEach(m=>m.classList.remove('show'));
+  }
+});
+
+/* ---- add/edit client panel ---- */
+document.getElementById('showAddClient').addEventListener('click', ()=>{
+  editingIndex = null;
+  document.getElementById('clientPanelTitle').textContent = 'Add a new client';
+  document.getElementById('newClientName').value='';
+  document.getElementById('slugPreview').textContent='clientname';
+  document.getElementById('logoPreviewWrap').innerHTML='';
+  document.getElementById('saveClientBtn').textContent = 'Save client';
+  document.getElementById('addClientPanel').style.display='block';
+});
+document.getElementById('newClientName').addEventListener('input', (e)=>{
+  document.getElementById('slugPreview').textContent = slugify(e.target.value) || 'clientname';
+});
+
+/* ---- logo upload preview ---- */
+document.getElementById('logoUploadBox').addEventListener('click', ()=> document.getElementById('logoFileInput').click());
+document.getElementById('logoFileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    document.getElementById('logoPreviewWrap').innerHTML = `
+      <div class="upload-preview" style="margin-top:10px">
+        <img src="${ev.target.result}">
+        <span class="fname">${file.name}</span>
+        <button type="button" onclick="document.getElementById('logoPreviewWrap').innerHTML='';document.getElementById('logoFileInput').value='';">Remove</button>
+      </div>`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('saveClientBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('newClientName').value.trim();
+  if(!name) return;
+  const slug = slugify(name);
+  const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const logoImg = document.getElementById('logoPreviewWrap').querySelector('img');
+  const logo = logoImg ? logoImg.src : null;
+
+  if(editingIndex !== null){
+    const old = clients[editingIndex];
+    if(old.name !== name){ sampleQuizzes[name] = sampleQuizzes[old.name]||[]; delete sampleQuizzes[old.name]; }
+    clients[editingIndex] = {...old, name, slug, initials, logo: logo||old.logo};
+  } else {
+    clients.push({name, slug, initials, logo, archived:false});
+    sampleQuizzes[name] = [];
+  }
+  renderClientCards();
+  document.getElementById('clientSavedToast').textContent = editingIndex!==null ? '✓ Changes saved' : "✓ Client added — their site is live at the URL above";
+  document.getElementById('clientSavedToast').classList.add('show');
+  document.getElementById('newClientName').value='';
+  document.getElementById('slugPreview').textContent='clientname';
+  document.getElementById('logoPreviewWrap').innerHTML='';
+  editingIndex = null;
+  setTimeout(()=>document.getElementById('clientSavedToast').classList.remove('show'), 3500);
+});
+
+/* ---- per-client quiz management ---- */
+const sampleQuizzes = {
+  'April Housing': [
+    {type:'mcq', question:"You want to see only projects tagged with a specific GL code. Where do you do that?",
+     options:["In the Reports tab","The GL Code filter on the Dashboard","Inside each individual project"], correctIndex:1,
+     explanation:"The filter row at the top of your Dashboard lets you narrow by Property, GL Code, Project Type, and a few others at once.", published:true},
+    {type:'mcq', question:"Where do you go to add a new vendor while inviting bidders?",
+     options:["Only from the main Vendors page","From the vendor-invite screen directly","You can't add one there"], correctIndex:1,
+     explanation:"The vendor-invite screen has an 'Add new Vendor or Contact' option right there, so you don't have to leave the flow.", published:true},
+    {type:'hotspot', question:"Upload a screenshot, then click the button learners should press to add a new cost item.",
+     image:'', explanation:'', published:false}
+  ],
+  'Morgan Properties': [], 'Clear Height': []
+};
+let qcardCounter = 0;
+
+const sampleGlossary = {
+  'April Housing': [
+    {term:'GL Code', definition:'A General Ledger code used to categorize a cost item by type of work or expense.', published:true},
+    {term:'Draw', definition:"A request for payment against a project's budget, usually tied to completed work.", published:true}
+  ],
+  'Morgan Properties': [], 'Clear Height': []
+};
+let fcCounter = 0;
+
+function flashcardTemplate(f){
+  const id = 'fc'+(fcCounter++);
+  return `<div class="flashcard-row" data-id="${id}">
+    <input type="text" class="fc-term" placeholder="Term" value="${f.term||''}">
+    <textarea class="fc-def" placeholder="Definition" rows="2">${f.definition||''}</textarea>
+    <label class="fc-include"><input type="checkbox" data-role="fcinclude" ${f.published?'checked':''}> Include</label>
+    <button type="button" class="fc-remove" data-role="fcremove" title="Remove flashcard">✕</button>
+  </div>`;
+}
+
+function mountFlashcard(f){
+  document.getElementById('glossCardList').insertAdjacentHTML('beforeend', flashcardTemplate(f));
+}
+
+function loadClientGlossary(clientName){
+  document.getElementById('glossCardList').innerHTML = '';
+  (sampleGlossary[clientName]||[]).forEach(f=>mountFlashcard(f));
+}
+
+document.getElementById('addFlashcardBtn').addEventListener('click', ()=>{
+  mountFlashcard({term:'', definition:'', published:false});
+});
+
+document.getElementById('glossCardList').addEventListener('click', (e)=>{
+  if(e.target.closest('[data-role="fcremove"]')){
+    e.target.closest('.flashcard-row').remove();
+  }
+});
+
+/* ---------- MCQ body ---------- */
+function mcqBody(q, id){
+  const opts = (q.options||['','']).map((opt,i)=>`
+    <div class="qcard-opt${i===q.correctIndex?' iscorrect':''}">
+      <input type="radio" name="correct-${id}" data-role="correctradio" ${i===q.correctIndex?'checked':''}>
+      <input type="text" value="${opt}">
+    </div>`).join('');
+  return `<div class="qcard-opts">${opts}</div>`;
+}
+
+/* ---------- image hotspot body ---------- */
+function hotspotBody(q){
+  if(!q.image){
+    return `<div class="hs-block" data-role="hsblock">
+      <div class="upload-box" data-role="hsUploadBox"><div class="uicon">🖼️</div><div class="utext">Click to upload the screenshot learners will click on</div></div>
+      <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
+    </div>`;
+  }
+  return `<div class="hs-block" data-role="hsblock">
+    <div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${q.image}"></div>
+    <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
+    <div class="hs-tools" data-role="hsTools">
+      <button class="hs-tool-btn" data-tool="select" type="button">🖱️ Select <span class="k">(S)</span></button>
+      <button class="hs-tool-btn" data-tool="draw" type="button">▭ Draw region <span class="k">(R)</span></button>
+      <button class="hs-tool-btn" data-tool="focus" type="button">🔍 Focus area <span class="k">(F)</span></button>
+    </div>
+    <div class="hs-region-list" data-role="hsRegionList"></div>
+    <p class="hs-empty-note" data-role="hsEmpty">No regions yet — pick "Draw region," then drag on the image above.</p>
+    <button class="hs-clear-btn" type="button" data-role="hsClear">Clear all regions</button>
+    <div data-role="hsFocusRemoveWrap"></div>
+    <button class="hs-clear-btn" type="button" data-role="hsReplaceImg">Replace image</button>
+  </div>`;
+}
+
+function renderQcardBody(q, id){
+  return (q.type==='hotspot') ? hotspotBody(q) : mcqBody(q, id);
+}
+
+function qcardTemplate(q){
+  const id = 'qc'+(qcardCounter++);
+  const type = q.type||'mcq';
+  return `<div class="qcard" data-id="${id}" data-type="${type}">
+    <div class="qcard-top">
+      <span class="qcard-badge${q.published?'':' unpub'}">${q.published?'Published':'Not published'}</span>
+      <button class="qcard-remove" data-role="remove" type="button" title="Remove question">✕</button>
+    </div>
+    <div class="qtype-toggle">
+      <button type="button" class="qtype-btn${type==='mcq'?' active':''}" data-role="settype" data-type="mcq">Multiple choice</button>
+      <button type="button" class="qtype-btn${type==='hotspot'?' active':''}" data-role="settype" data-type="hotspot">Image hotspot</button>
+    </div>
+    <textarea class="qcard-question" rows="2" placeholder="Type your question...">${q.question||''}</textarea>
+    <div class="qcard-body" data-role="qcardbody">${renderQcardBody(q, id)}</div>
+    <div class="qcard-explain">
+      <label>Explanation</label>
+      <textarea placeholder="Explain why this is correct...">${q.explanation||''}</textarea>
+      <div class="qcard-shotwrap">
+        <div class="upload-box small" data-role="shotbox"><div class="uicon">📸</div><div class="utext">Click to upload a screenshot</div></div>
+        <input type="file" accept="image/*" style="display:none" data-role="shotinput">
+      </div>
+    </div>
+    <label class="qcard-include"><input type="checkbox" data-role="include" ${q.published?'checked':''}> Include in published quiz</label>
+  </div>`;
+}
+
+/* ---------- image-hotspot admin interaction (scoped per card) ---------- */
+let hsActiveCard = null;
+document.addEventListener('keydown', (e)=>{
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if(!hsActiveCard || !document.body.contains(hsActiveCard)) return;
+  const tag = (e.target.tagName||'').toLowerCase();
+  if(tag==='input' || tag==='textarea' || e.target.isContentEditable) return;
+  const key = e.key.toLowerCase();
+  if(key==='r'){ e.preventDefault(); hsSetTool(hsActiveCard,'draw'); }
+  else if(key==='s'){ e.preventDefault(); hsSetTool(hsActiveCard,'select'); }
+  else if(key==='f'){ e.preventDefault(); hsSetTool(hsActiveCard,'focus'); }
+});
+
+function hsSetTool(cardEl, tool){
+  if(!cardEl || !cardEl.hsState) return;
+  const state = cardEl.hsState;
+  state.currentTool = tool;
+  state.selectedIds.clear();
+  state.selectedFocus = false;
+  const wrap = cardEl.querySelector('[data-role="hsWrap"]');
+  wrap.classList.remove('mode-select','mode-draw','mode-focus');
+  wrap.classList.add('mode-'+tool);
+  cardEl.querySelectorAll('.hs-tool-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tool===tool);
+    b.classList.toggle('focus-active', b.dataset.tool==='focus' && tool==='focus');
+  });
+  hsRenderAll(cardEl);
+}
+
+function hsAttachHandles(cardEl, container, dataRef){
+  const wrap = cardEl.querySelector('[data-role="hsWrap"]');
+  ['ne','sw','se'].forEach(corner=>{
+    const h = document.createElement('div');
+    h.className = 'hs-resize-handle ' + corner;
+    container.appendChild(h);
+    h.addEventListener('mousedown', (e)=>{
+      e.stopPropagation(); e.preventDefault();
+      const rect = wrap.getBoundingClientRect();
+      const start = {x:dataRef.x, y:dataRef.y, w:dataRef.w, h:dataRef.h};
+      const x2 = start.x+start.w, y2 = start.y+start.h;
+      function onMove(ev){
+        const curX = (ev.clientX-rect.left)/rect.width*100;
+        const curY = (ev.clientY-rect.top)/rect.height*100;
+        let x=start.x, y=start.y, w=start.w, hh=start.h;
+        if(corner==='se'){ w = curX-start.x; hh = curY-start.y; }
+        else if(corner==='ne'){ y = curY; w = curX-start.x; hh = y2-curY; }
+        else if(corner==='sw'){ x = curX; w = x2-curX; hh = curY-start.y; }
+        if(w<2) w=2; if(hh<2) hh=2;
+        dataRef.x=x; dataRef.y=y; dataRef.w=w; dataRef.h=hh;
+        hsRenderAll(cardEl);
+      }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+function hsRenderAll(cardEl){
+  const state = cardEl.hsState;
+  const wrap = cardEl.querySelector('[data-role="hsWrap"]');
+  if(!wrap) return;
+  wrap.querySelectorAll('.hs-region,.hs-focusbox').forEach(el=>el.remove());
+  const emptyNote = cardEl.querySelector('[data-role="hsEmpty"]');
+  if(emptyNote) emptyNote.style.display = state.regions.length ? 'none' : 'block';
+
+  const focusSelectedAlone = state.selectedFocus && state.selectedIds.size===0;
+
+  const focusRemoveWrap = cardEl.querySelector('[data-role="hsFocusRemoveWrap"]');
+  if(state.focusArea){
+    const fb = document.createElement('div');
+    fb.className = 'hs-focusbox' + (state.selectedFocus?' selected':'');
+    fb.style.left=state.focusArea.x+'%'; fb.style.top=state.focusArea.y+'%'; fb.style.width=state.focusArea.w+'%'; fb.style.height=state.focusArea.h+'%';
+    fb.innerHTML = `<span class="hs-flabel">FOCUS AREA</span>`;
+    wrap.appendChild(fb);
+    if(state.currentTool==='select' && focusSelectedAlone) hsAttachHandles(cardEl, fb, state.focusArea);
+    if(focusRemoveWrap) focusRemoveWrap.innerHTML = `<button type="button" class="hs-focus-remove" data-role="hsRemoveFocus">✕ Remove focus area</button>`;
+  } else if(focusRemoveWrap){
+    focusRemoveWrap.innerHTML = '';
+  }
+
+  state.regions.forEach((r,i)=>{
+    const isSelected = state.selectedIds.has(r.id);
+    const isSole = isSelected && state.selectedIds.size===1 && !state.selectedFocus;
+    const isGrouped = isSelected && (state.selectedIds.size>1 || state.selectedFocus);
+    const el = document.createElement('div');
+    el.className = 'hs-region' + (r.correct?' correctpick':'') + (isSole?' selected':'') + (isGrouped?' grouped':'');
+    el.dataset.id = r.id;
+    el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
+    el.innerHTML = `<span class="hs-num">${i+1}</span>`;
+    wrap.appendChild(el);
+    if(state.currentTool==='select' && isSole) hsAttachHandles(cardEl, el, r);
+  });
+
+  const listEl = cardEl.querySelector('[data-role="hsRegionList"]');
+  if(listEl){
+    listEl.innerHTML = state.regions.map((r,i)=>`
+      <div class="hs-region-row">
+        <span class="rn">${i+1}</span>
+        <label><input type="checkbox" data-role="hscorrect" data-idx="${i}" ${r.correct?'checked':''}> Correct answer</label>
+        <button type="button" class="del" data-role="hsdel" data-idx="${i}">✕ Remove</button>
+      </div>`).join('');
+  }
+}
+
+function hsWireWrap(cardEl){
+  const wrap = cardEl.querySelector('[data-role="hsWrap"]');
+  const state = cardEl.hsState;
+  let dragging=false, startX, startY, dragEl=null;
+
+  wrap.addEventListener('mousedown', (e)=>{
+    hsActiveCard = cardEl;
+    if(e.target.classList.contains('hs-resize-handle')) return;
+
+    if(state.currentTool==='select'){
+      const regionEl = e.target.closest('.hs-region');
+      const focusEl = e.target.closest('.hs-focusbox');
+      if(regionEl || focusEl){
+        e.stopPropagation();
+        const clickedId = regionEl ? +regionEl.dataset.id : null;
+        const clickedFocus = !!focusEl;
+        const alreadyInGroup = (clickedId!==null && state.selectedIds.has(clickedId)) || (clickedFocus && state.selectedFocus);
+        if(!alreadyInGroup){
+          state.selectedIds.clear(); state.selectedFocus=false;
+          if(clickedId!==null) state.selectedIds.add(clickedId);
+          if(clickedFocus) state.selectedFocus = true;
+          hsRenderAll(cardEl);
+        }
+        const rect = wrap.getBoundingClientRect();
+        const moveStart = {x:e.clientX, y:e.clientY, rectW:rect.width, rectH:rect.height};
+        const moveOrigins = {
+          regions: state.regions.filter(r=>state.selectedIds.has(r.id)).map(r=>({r,x:r.x,y:r.y})),
+          focus: (state.selectedFocus && state.focusArea) ? {x:state.focusArea.x, y:state.focusArea.y} : null
+        };
+        function onMove(ev){
+          const dx = (ev.clientX-moveStart.x)/moveStart.rectW*100;
+          const dy = (ev.clientY-moveStart.y)/moveStart.rectH*100;
+          moveOrigins.regions.forEach(o=>{ o.r.x=o.x+dx; o.r.y=o.y+dy; });
+          if(moveOrigins.focus){ state.focusArea.x=moveOrigins.focus.x+dx; state.focusArea.y=moveOrigins.focus.y+dy; }
+          hsRenderAll(cardEl);
+        }
+        function onUp(){
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        return;
+      }
+      const rect = wrap.getBoundingClientRect();
+      startX = e.clientX-rect.left; startY = e.clientY-rect.top;
+      dragging = true;
+      dragEl = document.createElement('div');
+      dragEl.className = 'hs-marquee-box';
+      dragEl.style.left=startX+'px'; dragEl.style.top=startY+'px';
+      wrap.appendChild(dragEl);
+      return;
+    }
+
+    if(state.currentTool==='draw' && e.target.closest('.hs-region')) return;
+
+    const rect = wrap.getBoundingClientRect();
+    startX = e.clientX-rect.left; startY = e.clientY-rect.top;
+    dragging = true;
+    dragEl = document.createElement('div');
+    dragEl.className = 'hs-drawing-box';
+    dragEl.style.left=startX+'px'; dragEl.style.top=startY+'px';
+    wrap.appendChild(dragEl);
+  });
+
+  wrap.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    const rect = wrap.getBoundingClientRect();
+    const curX = e.clientX-rect.left, curY = e.clientY-rect.top;
+    const left=Math.min(startX,curX), top=Math.min(startY,curY);
+    dragEl.style.left=left+'px'; dragEl.style.top=top+'px';
+    dragEl.style.width=Math.abs(curX-startX)+'px'; dragEl.style.height=Math.abs(curY-startY)+'px';
+  });
+
+  wrap.addEventListener('mouseup', ()=>{
+    if(!dragging) return;
+    dragging=false;
+    const rect = wrap.getBoundingClientRect();
+    const br = dragEl.getBoundingClientRect();
+    dragEl.remove();
+
+    if(state.currentTool==='select'){
+      if(br.width<6 || br.height<6){ state.selectedIds.clear(); state.selectedFocus=false; hsRenderAll(cardEl); return; }
+      const mbox = { left:br.left-rect.left, top:br.top-rect.top, right:br.left-rect.left+br.width, bottom:br.top-rect.top+br.height };
+      state.selectedIds.clear(); state.selectedFocus=false;
+      state.regions.forEach(r=>{
+        const rl=r.x/100*rect.width, rt=r.y/100*rect.height;
+        const rr=rl+r.w/100*rect.width, rb=rt+r.h/100*rect.height;
+        if(rl<mbox.right && rr>mbox.left && rt<mbox.bottom && rb>mbox.top) state.selectedIds.add(r.id);
+      });
+      hsRenderAll(cardEl);
+      return;
+    }
+
+    if(br.width<8 || br.height<8) return;
+    const box = {
+      x:(br.left-rect.left)/rect.width*100, y:(br.top-rect.top)/rect.height*100,
+      w:br.width/rect.width*100, h:br.height/rect.height*100
+    };
+    if(state.currentTool==='focus'){
+      state.focusArea = box;
+    } else {
+      state.regions.push({ id: state.nextId++, ...box, correct: state.regions.length===0 });
+    }
+    hsRenderAll(cardEl);
+  });
+}
+
+function hsInitCard(cardEl){
+  cardEl.hsState = { regions:[], focusArea:null, nextId:1, currentTool:'draw', selectedIds:new Set(), selectedFocus:false };
+  hsWireWrap(cardEl);
+  hsSetTool(cardEl, 'draw');
+  hsActiveCard = cardEl;
+}
+
+function mountQcard(q){
+  const html = qcardTemplate(q);
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  const cardEl = temp.firstElementChild;
+  document.getElementById('qcardList').appendChild(cardEl);
+  if((q.type==='hotspot') && q.image) hsInitCard(cardEl);
+  return cardEl;
+}
+
+function loadClientQuiz(clientName){
+  document.getElementById('quizClientName').textContent = clientName;
+  document.getElementById('qcardList').innerHTML = '';
+  const qs = sampleQuizzes[clientName] || [];
+  qs.forEach(q => mountQcard(q));
+}
+
+document.getElementById('backToClients').addEventListener('click', ()=> showAdminTab('clients'));
+
+document.getElementById('addQuestionCardBtn').addEventListener('click', ()=>{
+  const blank = {type:'mcq', question:'', options:['',''], correctIndex:0, explanation:'', published:false};
+  mountQcard(blank);
+});
+
+/* event delegation for all dynamically-added question cards */
+document.getElementById('qcardList').addEventListener('click', (e)=>{
+  if(e.target.dataset.role === 'remove'){
+    const card = e.target.closest('.qcard');
+    const qPreview = card.querySelector('.qcard-question').value.trim();
+    openModal({
+      title:'Remove this question?',
+      body:`${qPreview ? `<em>"${qPreview.slice(0,80)}${qPreview.length>80?'…':''}"</em><br><br>` : ''}This can't be undone.`,
+      danger:true, confirmText:'Remove question',
+      onConfirm:()=> card.remove()
+    });
+    return;
+  }
+  if(e.target.closest('[data-role="shotbox"]')){
+    e.target.closest('.qcard').querySelector('[data-role="shotinput"]').click();
+    return;
+  }
+  if(e.target.closest('[data-role="settype"]')){
+    const btn = e.target.closest('[data-role="settype"]');
+    const card = btn.closest('.qcard');
+    const newType = btn.dataset.type;
+    if(card.dataset.type === newType) return;
+    card.dataset.type = newType;
+    card.querySelectorAll('[data-role="settype"]').forEach(b=>b.classList.toggle('active', b.dataset.type===newType));
+    const bodyEl = card.querySelector('[data-role="qcardbody"]');
+    bodyEl.innerHTML = renderQcardBody(newType==='hotspot' ? {type:'hotspot', image:''} : {type:'mcq', options:['','']}, card.dataset.id);
+    delete card.hsState;
+    if(hsActiveCard===card) hsActiveCard = null;
+    return;
+  }
+  if(e.target.closest('[data-role="hsUploadBox"]') || e.target.closest('[data-role="hsReplaceImg"]')){
+    e.target.closest('.qcard').querySelector('[data-role="hsFileInput"]').click();
+    return;
+  }
+  if(e.target.closest('[data-role="hsdel"]')){
+    const card = e.target.closest('.qcard');
+    const idx = +e.target.closest('[data-role="hsdel"]').dataset.idx;
+    const removedId = card.hsState.regions[idx].id;
+    card.hsState.selectedIds.delete(removedId);
+    card.hsState.regions.splice(idx,1);
+    hsRenderAll(card);
+    return;
+  }
+  if(e.target.closest('[data-role="hsClear"]')){
+    const card = e.target.closest('.qcard');
+    card.hsState.regions=[]; card.hsState.focusArea=null;
+    card.hsState.selectedIds.clear(); card.hsState.selectedFocus=false;
+    hsRenderAll(card);
+    return;
+  }
+  if(e.target.closest('[data-role="hsRemoveFocus"]')){
+    const card = e.target.closest('.qcard');
+    card.hsState.focusArea=null; card.hsState.selectedFocus=false;
+    hsRenderAll(card);
+    return;
+  }
+  if(e.target.closest('.hs-tool-btn')){
+    const btn = e.target.closest('.hs-tool-btn');
+    const card = btn.closest('.qcard');
+    hsActiveCard = card;
+    hsSetTool(card, btn.dataset.tool);
+    return;
+  }
+});
+document.getElementById('qcardList').addEventListener('change', (e)=>{
+  if(e.target.dataset.role === 'correctradio'){
+    const card = e.target.closest('.qcard');
+    card.querySelectorAll('.qcard-opt').forEach(o=>o.classList.remove('iscorrect'));
+    e.target.closest('.qcard-opt').classList.add('iscorrect');
+    return;
+  }
+  if(e.target.dataset.role === 'shotinput'){
+    const file = e.target.files[0]; if(!file) return;
+    const wrap = e.target.closest('.qcard-shotwrap');
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      wrap.querySelector('[data-role="shotbox"]').style.display='none';
+      let preview = wrap.querySelector('.upload-preview');
+      if(!preview){
+        preview = document.createElement('div');
+        preview.className='upload-preview';
+        preview.style.marginTop='8px';
+        wrap.appendChild(preview);
+      }
+      preview.innerHTML = `<img src="${ev.target.result}"><span class="fname">${file.name}</span><button type="button" data-role="removeshot">Remove</button>`;
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  if(e.target.dataset.role === 'hsFileInput'){
+    const file = e.target.files[0]; if(!file) return;
+    const card = e.target.closest('.qcard');
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const bodyEl = card.querySelector('[data-role="qcardbody"]');
+      bodyEl.innerHTML = renderQcardBody({type:'hotspot', image:ev.target.result}, card.dataset.id);
+      hsInitCard(card);
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  if(e.target.dataset.role === 'hscorrect'){
+    const card = e.target.closest('.qcard');
+    card.hsState.regions[+e.target.dataset.idx].correct = e.target.checked;
+    hsRenderAll(card);
+    return;
+  }
+});
+document.getElementById('qcardList').addEventListener('click', (e)=>{
+  if(e.target.dataset.role === 'removeshot'){
+    const wrap = e.target.closest('.qcard-shotwrap');
+    wrap.querySelector('.upload-preview').remove();
+    wrap.querySelector('[data-role="shotbox"]').style.display='';
+    wrap.querySelector('[data-role="shotinput"]').value='';
+  }
+});
+
+function collectQcardData(card){
+  const type = card.dataset.type;
+  const question = card.querySelector('.qcard-question').value;
+  const explanation = card.querySelector('.qcard-explain textarea').value;
+  const published = card.querySelector('[data-role="include"]').checked;
+
+  if(type==='hotspot'){
+    const state = card.hsState || {regions:[], focusArea:null};
+    const imgEl = card.querySelector('[data-role="hsWrap"] img');
+    return {
+      type:'hotspot', question, explanation, published,
+      image: imgEl ? imgEl.getAttribute('src') : '',
+      regions: (state.regions||[]).map(r=>({x:r.x,y:r.y,w:r.w,h:r.h,correct:!!r.correct})),
+      focusArea: state.focusArea ? {x:state.focusArea.x,y:state.focusArea.y,w:state.focusArea.w,h:state.focusArea.h} : null
+    };
+  }
+
+  const opts = Array.from(card.querySelectorAll('.qcard-opt')).map(row=>({
+    text: row.querySelector('input[type=text]').value,
+    correct: row.querySelector('input[type=radio]').checked
+  }));
+  let correctIndex = opts.findIndex(o=>o.correct);
+  if(correctIndex===-1) correctIndex = 0;
+  return { type:'mcq', question, explanation, published, options: opts.map(o=>o.text), correctIndex };
+}
+
+function collectFlashcardData(row){
+  return {
+    term: row.querySelector('.fc-term').value,
+    definition: row.querySelector('.fc-def').value,
+    published: row.querySelector('[data-role="fcinclude"]').checked
+  };
+}
+
+document.getElementById('publishQuizBtn').addEventListener('click', ()=>{
+  const clientName = document.getElementById('quizClientName').textContent.trim();
+
+  const cards = Array.from(document.querySelectorAll('#qcardList .qcard'));
+  sampleQuizzes[clientName] = cards.map(collectQcardData);
+  cards.forEach(card=>{
+    const included = card.querySelector('[data-role="include"]').checked;
+    const badge = card.querySelector('.qcard-badge');
+    badge.textContent = included ? 'Published' : 'Not published';
+    badge.classList.toggle('unpub', !included);
+  });
+
+  const rows = Array.from(document.querySelectorAll('#glossCardList .flashcard-row'));
+  sampleGlossary[clientName] = rows.map(collectFlashcardData);
+
+  const t = document.getElementById('quizPublishedToast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3500);
+  if(typeof renderLearnerQuiz==='function') renderLearnerQuiz();
+  if(typeof renderGlossary==='function') renderGlossary();
+});
+</script>
+</body>
+</html>
