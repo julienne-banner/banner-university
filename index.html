@@ -271,6 +271,17 @@ main{min-width:0}
 .flashcard-back{background:var(--surface);transform:rotateY(180deg);color:var(--ink-soft);font-size:13px;line-height:1.45}
 .gloss-empty{color:var(--ink-faint);font-style:italic;font-size:14px}
 
+/* ---------- skeleton loading ---------- */
+.skel-block{background:linear-gradient(90deg, var(--line) 25%, var(--line-soft) 37%, var(--line) 63%);background-size:400% 100%;animation:skel-shimmer 1.4s ease infinite;border-radius:8px;display:block}
+@keyframes skel-shimmer{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+#bootOverlay{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .25s ease}
+#bootOverlay.hide{opacity:0;pointer-events:none}
+.boot-skeleton{width:100%;max-width:300px;padding:24px}
+.boot-skeleton .skel-block{margin:0 auto 14px}
+
+.qcard-skel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px;margin-bottom:14px}
+
 /* ---------- module tabs (admin) ---------- */
 .module-tabbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 22px;align-items:center}
 .module-tab{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
@@ -411,6 +422,15 @@ main{min-width:0}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<div id="bootOverlay">
+  <div class="boot-skeleton">
+    <span class="skel-block" style="width:44px;height:44px;border-radius:12px"></span>
+    <span class="skel-block" style="width:70%;height:14px"></span>
+    <span class="skel-block" style="width:90%;height:14px"></span>
+    <span class="skel-block" style="width:50%;height:14px"></span>
+  </div>
+</div>
 
 <!-- ============ SIGN-IN SCREEN ============ -->
 <div class="signin-screen" id="signinScreen">
@@ -1034,7 +1054,14 @@ async function fetchClients(){
 
 async function loadProgressDashboard(){
   const container = document.getElementById('progressDashboard');
-  container.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">Loading…</p>`;
+  container.innerHTML = `
+    <div class="admin-cards">
+      ${[1,2,3,4].map(()=>`<div class="admin-card">
+        <span class="skel-block" style="width:60%;height:11px;margin-bottom:10px"></span>
+        <span class="skel-block" style="width:40%;height:24px"></span>
+      </div>`).join('')}
+    </div>
+    <span class="skel-block" style="width:100%;height:160px;margin-top:20px;border-radius:12px"></span>`;
 
   const [{ data: clientRows, error: cErr }, { data: learnerRows, error: lErr }] = await Promise.all([
     sb.from('clients').select('*').eq('archived', false).order('name'),
@@ -1157,9 +1184,14 @@ function localFlashcardToDbRow(f, moduleId, clientId, sortOrder){
 }
 
 async function fetchModulesForClient(client){
-  const { data: clientRow, error: clientErr } = await sb.from('clients').select('id').eq('slug', client.slug).maybeSingle();
-  if(clientErr || !clientRow){ console.error('Could not find client in database:', client.slug, clientErr); return []; }
-  client.dbId = clientRow.id;
+  // the client's own id is already known after fetchClients() ran at boot —
+  // only look it up again if it's somehow missing, instead of every time
+  let clientDbId = client.dbId;
+  if(!clientDbId){
+    const { data: clientRow, error: clientErr } = await sb.from('clients').select('id').eq('slug', client.slug).maybeSingle();
+    if(clientErr || !clientRow){ console.error('Could not find client in database:', client.slug, clientErr); return []; }
+    clientDbId = client.dbId = clientRow.id;
+  }
 
   // one request each for modules/questions/flashcards — regardless of how
   // many tabs this client has — instead of looping and fetching per tab
@@ -1168,9 +1200,9 @@ async function fetchModulesForClient(client){
     { data: qRows, error: qErr },
     { data: fRows, error: fErr }
   ] = await Promise.all([
-    sb.from('modules').select('*').eq('client_id', clientRow.id).order('sort_order'),
-    sb.from('quiz_questions').select('*').eq('client_id', clientRow.id).order('sort_order'),
-    sb.from('glossary_terms').select('*').eq('client_id', clientRow.id).order('sort_order')
+    sb.from('modules').select('*').eq('client_id', clientDbId).order('sort_order'),
+    sb.from('quiz_questions').select('*').eq('client_id', clientDbId).order('sort_order'),
+    sb.from('glossary_terms').select('*').eq('client_id', clientDbId).order('sort_order')
   ]);
   if(modErr){ console.error('Error loading modules:', modErr); return []; }
   if(qErr) console.error('Error loading questions:', qErr);
@@ -1204,7 +1236,13 @@ async function showShellForUser(client, user){
   currentLearner = user;
   currentLearner.progress = user.progress || {};
 
-  document.getElementById('learnerQuizList').innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">Loading your training…</p></div>`;
+  document.getElementById('learnerQuizList').innerHTML = `
+    <div class="quiz">
+      <span class="skel-block" style="width:40%;height:11px;margin-bottom:14px"></span>
+      <span class="skel-block" style="width:80%;height:16px;margin-bottom:16px"></span>
+      <span class="skel-block" style="width:100%;height:44px;margin-bottom:8px"></span>
+      <span class="skel-block" style="width:100%;height:44px"></span>
+    </div>`;
   sampleModules[client.name] = await fetchModulesForClient(client);
 
   const modules = sampleModules[client.name] || [];
@@ -1369,6 +1407,7 @@ async function bootstrapRoute(){
 (async ()=>{
   await fetchClients();
   await bootstrapRoute();
+  document.getElementById('bootOverlay').classList.add('hide');
 })();
 
 function clientCardTemplate(c, idx){
@@ -1938,9 +1977,18 @@ function loadActiveModuleContent(clientName){
 
 async function loadClientModules(clientName){
   document.getElementById('quizClientName').textContent = clientName;
-  document.getElementById('moduleTabBar').innerHTML = `<span style="color:var(--ink-faint);font-size:13px">Loading tabs…</span>`;
-  document.getElementById('qcardList').innerHTML = '';
-  document.getElementById('glossCardList').innerHTML = '';
+  document.getElementById('moduleTabBar').innerHTML = `
+    <span class="skel-block" style="width:120px;height:36px;border-radius:9px"></span>
+    <span class="skel-block" style="width:100px;height:36px;border-radius:9px"></span>`;
+  document.getElementById('qcardList').innerHTML = `
+    <div class="qcard-skel">
+      <span class="skel-block" style="width:65%;height:15px;margin-bottom:16px"></span>
+      <span class="skel-block" style="width:100%;height:42px;margin-bottom:8px"></span>
+      <span class="skel-block" style="width:100%;height:42px"></span>
+    </div>`;
+  document.getElementById('glossCardList').innerHTML = `
+    <span class="skel-block" style="width:100%;height:52px;margin-bottom:10px"></span>
+    <span class="skel-block" style="width:100%;height:52px"></span>`;
 
   const client = clients.find(c=>c.name===clientName);
   sampleModules[clientName] = await fetchModulesForClient(client);
