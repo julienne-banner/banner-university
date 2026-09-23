@@ -1006,16 +1006,27 @@ document.getElementById('adminGateForm').addEventListener('submit', async e=>{
 
   submitBtn.disabled = true;
   try{
-    const { error: authError } = await sb.auth.signInWithPassword({ email, password });
+    const { data: authData, error: authError } = await sb.auth.signInWithPassword({ email, password });
     if(authError){
-      errEl.textContent = 'Incorrect email or password.';
+      console.error('Auth error:', authError);
+      errEl.textContent = 'Sign-in failed: ' + authError.message;
       errEl.style.display='block';
       return;
     }
+    console.log('Signed in OK as:', authData.user.email);
+
     const { data: adminRow, error: adminError } = await sb.from('admins').select('email').eq('email', email.toLowerCase()).maybeSingle();
-    if(adminError || !adminRow){
+    console.log('Admin lookup ->', { adminRow, adminError });
+
+    if(adminError){
       await sb.auth.signOut();
-      errEl.textContent = "That account doesn't have admin access.";
+      errEl.textContent = 'Admin check failed: ' + adminError.message;
+      errEl.style.display='block';
+      return;
+    }
+    if(!adminRow){
+      await sb.auth.signOut();
+      errEl.textContent = "That account doesn't have admin access (no matching row came back — check the browser console for details).";
       errEl.style.display='block';
       return;
     }
