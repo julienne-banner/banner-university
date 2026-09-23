@@ -1078,7 +1078,59 @@ function brandSidebarFor(client){
   document.getElementById('sbClientName').textContent = client.name;
 }
 
-function showShellForUser(client, user){
+/* ---------- fetching/saving modules(tabs)+questions+flashcards from Supabase ---------- */
+function dbQuestionToLocal(row){
+  return {
+    dbId: row.id, type: row.type, question: row.question || '',
+    options: row.options || [], correctIndex: row.correct_index,
+    image: row.image || '', regions: row.regions || [], focusArea: row.focus_area || null,
+    explanation: row.explanation || '', published: !!row.published
+  };
+}
+function dbFlashcardToLocal(row){
+  return { dbId: row.id, term: row.term || '', definition: row.definition || '', published: !!row.published };
+}
+function localQuestionToDbRow(q, moduleId, clientId, sortOrder){
+  return {
+    module_id: moduleId, client_id: clientId, type: q.type, question: q.question || '',
+    options: q.type==='mcq' ? q.options : null,
+    correct_index: q.type==='mcq' ? q.correctIndex : null,
+    image: q.type==='hotspot' ? (q.image||'') : null,
+    regions: q.type==='hotspot' ? (q.regions||[]) : null,
+    focus_area: q.type==='hotspot' ? (q.focusArea||null) : null,
+    explanation: q.explanation || '', published: !!q.published, sort_order: sortOrder
+  };
+}
+function localFlashcardToDbRow(f, moduleId, clientId, sortOrder){
+  return { module_id: moduleId, client_id: clientId, term: f.term||'', definition: f.definition||'', published: !!f.published, sort_order: sortOrder };
+}
+
+async function fetchModulesForClient(client){
+  const { data: clientRow, error: clientErr } = await sb.from('clients').select('id').eq('slug', client.slug).maybeSingle();
+  if(clientErr || !clientRow){ console.error('Could not find client in database:', client.slug, clientErr); return []; }
+  client.dbId = clientRow.id;
+
+  const { data: moduleRows, error: modErr } = await sb.from('modules').select('*').eq('client_id', clientRow.id).order('sort_order');
+  if(modErr){ console.error('Error loading modules:', modErr); return []; }
+
+  const modules = [];
+  for(const mrow of (moduleRows||[])){
+    const [{data:qRows, error:qErr}, {data:fRows, error:fErr}] = await Promise.all([
+      sb.from('quiz_questions').select('*').eq('module_id', mrow.id).order('sort_order'),
+      sb.from('glossary_terms').select('*').eq('module_id', mrow.id).order('sort_order')
+    ]);
+    if(qErr) console.error('Error loading questions for module', mrow.id, qErr);
+    if(fErr) console.error('Error loading flashcards for module', mrow.id, fErr);
+    modules.push({
+      id: mrow.id, dbId: mrow.id, title: mrow.title,
+      questions: (qRows||[]).map(dbQuestionToLocal),
+      flashcards: (fRows||[]).map(dbFlashcardToLocal)
+    });
+  }
+  return modules;
+}
+
+async function showShellForUser(client, user){
   document.getElementById('signinScreen').style.display='none';
   document.getElementById('invalidLinkScreen').style.display='none';
   brandSidebarFor(client);
@@ -1089,6 +1141,10 @@ function showShellForUser(client, user){
   currentClient = client;
   currentLearner = user;
   currentLearner.progress = user.progress || {};
+
+  document.getElementById('learnerQuizList').innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">Loading your training…</p></div>`;
+  sampleModules[client.name] = await fetchModulesForClient(client);
+
   const modules = sampleModules[client.name] || [];
   activeLearnerModuleId = modules[0] ? modules[0].id : null;
   renderLearnerNav();
@@ -1770,9 +1826,16 @@ function loadActiveModuleContent(clientName){
   (mod.flashcards||[]).forEach(f => mountFlashcard(f));
 }
 
-function loadClientModules(clientName){
+async function loadClientModules(clientName){
   document.getElementById('quizClientName').textContent = clientName;
-  const modules = sampleModules[clientName] || [];
+  document.getElementById('moduleTabBar').innerHTML = `<span style="color:var(--ink-faint);font-size:13px">Loading tabs…</span>`;
+  document.getElementById('qcardList').innerHTML = '';
+  document.getElementById('glossCardList').innerHTML = '';
+
+  const client = clients.find(c=>c.name===clientName);
+  sampleModules[clientName] = await fetchModulesForClient(client);
+  const modules = sampleModules[clientName];
+
   if(!activeModuleId[clientName] || !modules.find(m=>m.id===activeModuleId[clientName])){
     activeModuleId[clientName] = modules[0] ? modules[0].id : null;
   }
@@ -1806,11 +1869,15 @@ document.getElementById('moduleTabBar').addEventListener('click', (e)=>{
       title:'Delete this tab?',
       body:`<em>"${mod.title}"</em> and its ${mod.questions.length} question(s) and ${mod.flashcards.length} flashcard(s) will be removed. This can't be undone.`,
       danger:true, confirmText:'Delete tab',
-      onConfirm:()=>{
+      onConfirm:async ()=>{
         modules.splice(idx,1);
         if(activeModuleId[clientName]===mod.id) activeModuleId[clientName] = modules[0] ? modules[0].id : null;
         renderModuleTabBar(clientName);
         loadActiveModuleContent(clientName);
+        if(mod.dbId){
+          const { error } = await sb.from('modules').delete().eq('id', mod.dbId);
+          if(error) console.error('Failed to delete tab from database:', error);
+        }
       }
     });
     return;
@@ -1998,8 +2065,9 @@ function collectFlashcardData(row){
   };
 }
 
-document.getElementById('publishQuizBtn').addEventListener('click', ()=>{
+document.getElementById('publishQuizBtn').addEventListener('click', async ()=>{
   const clientName = document.getElementById('quizClientName').textContent.trim();
+  const client = clients.find(c=>c.name===clientName);
   const mod = (sampleModules[clientName]||[]).find(m=>m.id===activeModuleId[clientName]);
   if(!mod){
     openModal({ title:'Add a tab first', body:'Create a tab above before adding questions or flashcards.', confirmText:'Got it', onConfirm:()=>{} });
@@ -2008,23 +2076,65 @@ document.getElementById('publishQuizBtn').addEventListener('click', ()=>{
 
   const cards = Array.from(document.querySelectorAll('#qcardList .qcard'));
   mod.questions = cards.map(collectQcardData);
-  cards.forEach(card=>{
-    const included = card.querySelector('[data-role="include"]').checked;
-    const badge = card.querySelector('.qcard-badge');
-    badge.textContent = included ? 'Published' : 'Not published';
-    badge.classList.toggle('unpub', !included);
-  });
-
   const rows = Array.from(document.querySelectorAll('#glossCardList .flashcard-row'));
   mod.flashcards = rows.map(collectFlashcardData);
 
-  const t = document.getElementById('quizPublishedToast');
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3500);
+  const btn = document.getElementById('publishQuizBtn');
+  btn.disabled = true;
+  btn.textContent = 'Publishing…';
 
-  if(typeof renderLearnerNav==='function') renderLearnerNav();
-  if(typeof renderActiveLearnerModule==='function') renderActiveLearnerModule();
-  if(typeof renderGlossary==='function') renderGlossary();
+  try{
+    if(!client.dbId){
+      const { data: crow, error: cerr } = await sb.from('clients').select('id').eq('slug', client.slug).maybeSingle();
+      if(cerr || !crow) throw new Error("Couldn't find this client in the database.");
+      client.dbId = crow.id;
+    }
+
+    if(!mod.dbId){
+      const { data: newMod, error: modErr } = await sb.from('modules').insert({ client_id: client.dbId, title: mod.title }).select().single();
+      if(modErr) throw modErr;
+      mod.dbId = newMod.id;
+      mod.id = newMod.id;
+      activeModuleId[clientName] = mod.id;
+    } else {
+      const { error: renameErr } = await sb.from('modules').update({ title: mod.title }).eq('id', mod.dbId);
+      if(renameErr) throw renameErr;
+    }
+
+    const { error: delQErr } = await sb.from('quiz_questions').delete().eq('module_id', mod.dbId);
+    if(delQErr) throw delQErr;
+    if(mod.questions.length){
+      const qToInsert = mod.questions.map((q,i)=>localQuestionToDbRow(q, mod.dbId, client.dbId, i));
+      const { error: insQErr } = await sb.from('quiz_questions').insert(qToInsert);
+      if(insQErr) throw insQErr;
+    }
+
+    const { error: delFErr } = await sb.from('glossary_terms').delete().eq('module_id', mod.dbId);
+    if(delFErr) throw delFErr;
+    if(mod.flashcards.length){
+      const fToInsert = mod.flashcards.map((f,i)=>localFlashcardToDbRow(f, mod.dbId, client.dbId, i));
+      const { error: insFErr } = await sb.from('glossary_terms').insert(fToInsert);
+      if(insFErr) throw insFErr;
+    }
+
+    cards.forEach(card=>{
+      const included = card.querySelector('[data-role="include"]').checked;
+      const badge = card.querySelector('.qcard-badge');
+      badge.textContent = included ? 'Published' : 'Not published';
+      badge.classList.toggle('unpub', !included);
+    });
+    renderModuleTabBar(clientName);
+
+    const t = document.getElementById('quizPublishedToast');
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 3500);
+  } catch(err){
+    console.error('Publish failed:', err);
+    openModal({ title:'Publish failed', body: 'Something went wrong saving to the database: ' + (err.message||String(err)), confirmText:'OK', onConfirm:()=>{} });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Publish';
+  }
 });
 </script>
 </body>
