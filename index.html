@@ -270,6 +270,21 @@ main{min-width:0}
 .flashcard-back{background:var(--surface);transform:rotateY(180deg);color:var(--ink-soft);font-size:13px;line-height:1.45}
 .gloss-empty{color:var(--ink-faint);font-style:italic;font-size:14px}
 
+/* ---------- module tabs (admin) ---------- */
+.module-tabbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 22px;align-items:center}
+.module-tab{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
+.module-tab.active{border-color:var(--coral);color:var(--coral-deep);background:var(--coral-soft)}
+.module-tab input{border:0;background:none;font:inherit;font-weight:inherit;color:inherit;width:auto;min-width:40px;padding:0}
+.module-tab input:focus{outline:none;border-bottom:1.5px solid var(--coral)}
+.module-tab .tabdel{background:none;border:0;color:inherit;opacity:.6;font-size:12px;padding:0 2px}
+.module-tab .tabdel:hover{opacity:1;color:var(--coral-deep)}
+.module-tab-add{background:none;border:1.5px dashed var(--line);border-radius:9px;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
+.module-tab-add:hover{border-color:var(--coral);color:var(--coral-deep)}
+
+/* ---------- inline per-module flashcards (learner) ---------- */
+.inline-flashcards{margin:28px 0}
+.inline-flashcards h3{font-size:15px;margin-bottom:12px;color:var(--ink)}
+
 /* ---------- signup/login toggle + errors ---------- */
 .auth-toggle{display:flex;gap:6px;margin:18px 0 4px;background:var(--bg);border-radius:10px;padding:4px}
 .auth-toggle-btn{flex:1;background:none;border:0;border-radius:7px;padding:8px 0;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer}
@@ -472,12 +487,7 @@ main{min-width:0}
     </div>
     <nav class="sb-nav" id="sbNav">
       <div class="navlabel">Contents</div>
-      <button class="navitem done" data-page="intro">Getting started<span class="tick">✓</span></button>
-      <button class="navitem active" data-page="quiz">Your dashboard<span class="tick">✓</span></button>
-      <button class="navitem" data-page="projects">Adding a project<span class="tick">✓</span></button>
-      <button class="navitem" data-page="bidding">Bidding & vendors<span class="tick">✓</span></button>
-      <button class="navitem" data-page="approvals">Approvals<span class="tick">✓</span></button>
-      <button class="navitem" data-page="reports">Reports<span class="tick">✓</span></button>
+      <!-- module nav items are rendered here by renderLearnerNav() -->
     </nav>
     <div class="sb-foot">
       <button class="sb-footbtn" id="glossBtn" type="button">📖 Glossary reference</button>
@@ -488,16 +498,15 @@ main{min-width:0}
   <main>
     <div class="topbar">
       <button class="menubtn" id="menuBtn">☰ Menu</button>
-      <span class="crumb">Your dashboard</span>
-      <span class="pct">17% complete</span>
+      <span class="crumb" id="pageCrumb">—</span>
+      <span class="pct" id="pagePctLabel">0% complete</span>
     </div>
     <div class="page" id="page">
-      <div class="eyebrow">Module 2</div>
-      <h1>Finding your way around the dashboard</h1>
-      <p class="lede">Everything in Banner starts here — filter to a property, switch views, and jump into any project from one screen.</p>
-      <p>Take a moment to look at the layout: the filter bar sits across the top, and the main table below it lists whatever you've filtered to. You'll spend most of your time in this view.</p>
+      <div class="eyebrow" id="pageEyebrow">Module</div>
+      <h1 id="pageTitle">—</h1>
 
       <div id="learnerQuizList"></div>
+      <div id="learnerModuleFlashcards"></div>
 
       <div class="modfooter">
         <button class="btn-next" id="completeBtn" disabled>Mark complete</button>
@@ -616,7 +625,15 @@ main{min-width:0}
     <div class="section-head">
       <h2>Managing quiz — <span id="quizClientName">April Housing</span></h2>
     </div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:14px">Each tab is a bucket learners see as its own item in their left-nav — with its own questions and its own flashcards.</p>
 
+    <div class="module-tabbar" id="moduleTabBar">
+      <!-- module/tab buttons injected here -->
+    </div>
+
+    <div class="section-head" style="margin-top:8px">
+      <h2 style="font-size:17px">Questions in this tab</h2>
+    </div>
     <div id="qcardList">
       <!-- question cards injected here -->
     </div>
@@ -625,9 +642,9 @@ main{min-width:0}
 
     <hr class="divider" style="margin:36px 0 24px">
     <div class="section-head">
-      <h2>Glossary flashcards</h2>
+      <h2>Glossary flashcards for this tab</h2>
     </div>
-    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:16px">Term/definition pairs learners can flip through from the "📖 Glossary reference" button.</p>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:16px">Term/definition pairs learners can flip through, shown right inside this tab (and in the "📖 Glossary reference" button, across all tabs).</p>
     <div id="glossCardList">
       <!-- flashcard rows injected here -->
     </div>
@@ -679,131 +696,253 @@ document.getElementById('menuBtn').addEventListener('click', ()=>{
   document.getElementById('sidebar').classList.toggle('open');
 });
 
-function renderLearnerQuiz(){
-  const questions = (sampleQuizzes['April Housing']||[]).filter(q=>q.published);
+let currentLearner = null;
+let activeLearnerModuleId = null;
+
+function computeProgressPct(){
+  const modules = sampleModules[currentClient?.name] || [];
+  if(modules.length===0) return 0;
+  const progress = (currentLearner && currentLearner.progress) || {};
+  const done = modules.filter(m=>progress[m.id]).length;
+  return Math.round((done/modules.length)*100);
+}
+
+function updateProgressChrome(){
+  const pct = computeProgressPct();
+  document.getElementById('pctLabel').textContent = pct+'%';
+  document.getElementById('pbar').style.width = pct+'%';
+  document.getElementById('pagePctLabel').textContent = pct+'% complete';
+}
+
+function renderLearnerNav(){
+  const modules = sampleModules[currentClient?.name] || [];
+  const progress = (currentLearner && currentLearner.progress) || {};
+  const nav = document.getElementById('sbNav');
+  nav.innerHTML = `<div class="navlabel">Contents</div>` + (modules.length===0
+    ? `<p style="padding:10px 11px;color:var(--ink-faint);font-size:13.5px;font-style:italic">No content published yet.</p>`
+    : modules.map(m=>`
+      <button class="navitem${m.id===activeLearnerModuleId?' active':''}${progress[m.id]?' done':''}" data-module-id="${m.id}" type="button">
+        ${m.title}<span class="tick">✓</span>
+      </button>`).join(''));
+  updateProgressChrome();
+}
+
+function renderInlineFlashcards(containerEl, flashcards){
+  const terms = (flashcards||[]).filter(f=>f.published && f.term && f.definition);
+  if(terms.length===0){ containerEl.innerHTML=''; return; }
+  containerEl.innerHTML = `<div class="inline-flashcards"><h3>Key terms in this section</h3><div class="gloss-grid">${
+    terms.map(f=>`
+      <div class="flashcard">
+        <div class="flashcard-inner">
+          <div class="flashcard-face flashcard-front">${f.term}</div>
+          <div class="flashcard-face flashcard-back">${f.definition}</div>
+        </div>
+      </div>`).join('')
+  }</div></div>`;
+  containerEl.querySelectorAll('.flashcard').forEach(card=>{
+    card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+  });
+}
+
+async function markActiveModuleComplete(){
+  if(!currentLearner || !activeLearnerModuleId) return;
+  const modules = sampleModules[currentClient?.name] || [];
+  const progress = { ...(currentLearner.progress||{}), [activeLearnerModuleId]: true };
+  const allComplete = modules.length>0 && modules.every(m=>progress[m.id]);
+
+  const btn = document.getElementById('completeBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const { error } = await sb.rpc('save_progress', {
+    p_learner_id: currentLearner.id, p_progress: progress, p_completed: allComplete
+  });
+
+  if(error){
+    console.error('save_progress error:', error);
+    btn.textContent = 'Mark complete';
+    btn.disabled = false;
+    document.getElementById('gateHint').textContent = "Couldn't save — check your connection and try again.";
+    return;
+  }
+
+  currentLearner.progress = progress;
+  btn.textContent = '✓ Completed';
+  renderLearnerNav();
+
+  // nice touch: auto-advance to the next unfinished module, if any
+  const next = modules.find(m=>!progress[m.id]);
+  if(next){
+    setTimeout(()=>{ activeLearnerModuleId = next.id; renderLearnerNav(); renderActiveLearnerModule(); }, 700);
+  }
+}
+
+function renderActiveLearnerModule(){
+  const modules = sampleModules[currentClient?.name] || [];
+  const mod = modules.find(m=>m.id===activeLearnerModuleId);
   const container = document.getElementById('learnerQuizList');
+  const flashEl = document.getElementById('learnerModuleFlashcards');
+  const completeBtn = document.getElementById('completeBtn');
+  const gateHint = document.getElementById('gateHint');
+  completeBtn.onclick = markActiveModuleComplete;
+
+  if(!mod){
+    document.getElementById('pageEyebrow').textContent = 'Module';
+    document.getElementById('pageTitle').textContent = 'Nothing published yet';
+    document.getElementById('pageCrumb').textContent = '—';
+    container.innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">Check back once your training administrator publishes content here.</p></div>`;
+    flashEl.innerHTML = '';
+    completeBtn.disabled = true;
+    completeBtn.textContent = 'Mark complete';
+    gateHint.textContent = '';
+    return;
+  }
+
+  document.getElementById('pageEyebrow').textContent = 'Module';
+  document.getElementById('pageTitle').textContent = mod.title;
+  document.getElementById('pageCrumb').textContent = mod.title;
+
+  const alreadyDone = !!(currentLearner && currentLearner.progress && currentLearner.progress[mod.id]);
+  const questions = (mod.questions||[]).filter(q=>q.published);
   container.innerHTML = '';
   const answered = new Set();
 
   function checkAllAnswered(){
-    const completeBtn = document.getElementById('completeBtn');
-    const gateHint = document.getElementById('gateHint');
+    if(alreadyDone){ return; }
     if(questions.length===0){
       completeBtn.disabled = false;
+      completeBtn.textContent = 'Mark complete';
       gateHint.textContent = '';
     } else if(answered.size >= questions.length){
       completeBtn.disabled = false;
+      completeBtn.textContent = 'Mark complete';
       gateHint.textContent = '';
     } else {
       completeBtn.disabled = true;
+      completeBtn.textContent = 'Mark complete';
       gateHint.textContent = `Answer the question${questions.length>1?'s':''} above to continue (${answered.size}/${questions.length})`;
     }
   }
 
-  if(questions.length===0){
-    container.innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">No questions published yet for this module.</p></div>`;
-    checkAllAnswered();
-    return;
+  if(alreadyDone){
+    completeBtn.disabled = true;
+    completeBtn.textContent = '✓ Completed';
+    gateHint.textContent = '';
   }
 
-  questions.forEach((q,qi)=>{
-    const block = document.createElement('div');
-    block.className = 'quiz';
+  if(questions.length===0){
+    container.innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">No questions published yet for this section.</p></div>`;
+    if(!alreadyDone) checkAllAnswered();
+  } else {
+    questions.forEach((q,qi)=>{
+      const block = document.createElement('div');
+      block.className = 'quiz';
 
-    if(q.type==='hotspot'){
-      block.innerHTML = `
-        <div class="qtag">Quick check</div>
-        <div class="qtext">${q.question||''}</div>
-        ${q.image
-          ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${q.image}"></div>`
-          : `<p style="color:var(--ink-faint);font-style:italic">This question isn't fully set up yet — no screenshot uploaded.</p>`}
-        <div class="explain" id="learnerExplain${qi}">
-          <span class="tag">Correct</span>
-          <p>${q.explanation || 'Nice job — that is the right spot.'}</p>
-        </div>`;
-      container.appendChild(block);
+      if(q.type==='hotspot'){
+        block.innerHTML = `
+          <div class="qtag">Quick check</div>
+          <div class="qtext">${q.question||''}</div>
+          ${q.image
+            ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${q.image}"></div>`
+            : `<p style="color:var(--ink-faint);font-style:italic">This question isn't fully set up yet — no screenshot uploaded.</p>`}
+          <div class="explain" id="learnerExplain${qi}">
+            <span class="tag">Correct</span>
+            <p>${q.explanation || 'Nice job — that is the right spot.'}</p>
+          </div>`;
+        container.appendChild(block);
 
-      if(q.image){
-        const wrap = block.querySelector(`#learnerHs${qi}`);
-        let solved = false;
-        if(q.focusArea){
-          const fb = document.createElement('div');
-          fb.className = 'hs-learner-focusbox';
-          fb.style.left=q.focusArea.x+'%'; fb.style.top=q.focusArea.y+'%'; fb.style.width=q.focusArea.w+'%'; fb.style.height=q.focusArea.h+'%';
-          wrap.appendChild(fb);
+        if(q.image){
+          const wrap = block.querySelector(`#learnerHs${qi}`);
+          let solved = alreadyDone;
+          if(q.focusArea){
+            const fb = document.createElement('div');
+            fb.className = 'hs-learner-focusbox';
+            fb.style.left=q.focusArea.x+'%'; fb.style.top=q.focusArea.y+'%'; fb.style.width=q.focusArea.w+'%'; fb.style.height=q.focusArea.h+'%';
+            wrap.appendChild(fb);
+          }
+          const built = (q.regions||[]).map(r=>{
+            const el = document.createElement('div');
+            el.className = 'hs-hotspot';
+            el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
+            wrap.appendChild(el);
+            const badge = document.createElement('div');
+            badge.className = 'hs-badge';
+            badge.style.left = `calc(${r.x + r.w}% - 10px)`;
+            badge.style.top = `calc(${r.y}% - 10px)`;
+            wrap.appendChild(badge);
+            return {r, el, badge};
+          });
+          if(alreadyDone){
+            built.forEach(({r,el,badge})=>{ if(r.correct){ el.classList.add('is-correct'); badge.classList.add('show','right'); badge.textContent='✓'; } el.style.pointerEvents='none'; });
+            block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+          }
+          built.forEach(({r,el,badge})=>{
+            el.addEventListener('click', ()=>{
+              if(solved || el.dataset.tried) return;
+              if(r.correct){
+                solved = true;
+                built.forEach(other=>{
+                  if(other.r.correct){
+                    other.el.classList.add('is-correct');
+                    other.badge.classList.add('show','right'); other.badge.textContent='✓';
+                    if(other.el===el) other.el.classList.add('pop');
+                  }
+                  other.el.style.pointerEvents = 'none';
+                });
+                block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+                answered.add(qi);
+                checkAllAnswered();
+              } else {
+                el.dataset.tried = '1';
+                el.classList.add('tried-wrong','shake');
+                badge.classList.add('show','wrong'); badge.textContent='✕';
+                setTimeout(()=>el.classList.remove('shake'), 400);
+              }
+            });
+          });
+        } else {
+          answered.add(qi);
         }
-        const built = (q.regions||[]).map(r=>{
-          const el = document.createElement('div');
-          el.className = 'hs-hotspot';
-          el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
-          wrap.appendChild(el);
-          const badge = document.createElement('div');
-          badge.className = 'hs-badge';
-          badge.style.left = `calc(${r.x + r.w}% - 10px)`;
-          badge.style.top = `calc(${r.y}% - 10px)`;
-          wrap.appendChild(badge);
-          return {r, el, badge};
-        });
-        built.forEach(({r,el,badge})=>{
-          el.addEventListener('click', ()=>{
-            if(solved || el.dataset.tried) return;
-            if(r.correct){
-              solved = true;
-              built.forEach(other=>{
-                if(other.r.correct){
-                  other.el.classList.add('is-correct');
-                  other.badge.classList.add('show','right'); other.badge.textContent='✓';
-                  if(other.el===el) other.el.classList.add('pop');
-                }
-                other.el.style.pointerEvents = 'none';
-              });
-              block.querySelector(`#learnerExplain${qi}`).classList.add('show');
-              answered.add(qi);
-              checkAllAnswered();
-            } else {
-              el.dataset.tried = '1';
-              el.classList.add('tried-wrong','shake');
-              badge.classList.add('show','wrong'); badge.textContent='✕';
-              setTimeout(()=>el.classList.remove('shake'), 400);
+      } else {
+        const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"${alreadyDone?' disabled':''}><span class="dot"></span> ${opt}</button>`).join('');
+        block.innerHTML = `
+          <div class="qtag">Quick check</div>
+          <div class="qtext">${q.question||''}</div>
+          <div class="qopts-${qi}">${opts}</div>
+          <div class="explain${alreadyDone?' show':''}" id="learnerExplain${qi}">
+            <span class="tag">Correct</span>
+            <p>${q.explanation||''}</p>
+          </div>`;
+        container.appendChild(block);
+        if(alreadyDone){
+          const correctBtn = block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`);
+          if(correctBtn) correctBtn.classList.add('correct');
+        }
+        block.querySelectorAll(`.qopts-${qi} .opt`).forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            block.querySelectorAll(`.qopts-${qi} .opt`).forEach(b=>b.disabled=true);
+            const correct = btn.dataset.correct === 'true';
+            btn.classList.add(correct ? 'correct' : 'wrong');
+            if(!correct){
+              block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`).classList.add('correct');
             }
+            block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+            answered.add(qi);
+            checkAllAnswered();
           });
         });
-      } else {
-        answered.add(qi); // nothing to answer — don't block completion on an unfinished question
       }
-    } else {
-      const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"><span class="dot"></span> ${opt}</button>`).join('');
-      block.innerHTML = `
-        <div class="qtag">Quick check</div>
-        <div class="qtext">${q.question||''}</div>
-        <div class="qopts-${qi}">${opts}</div>
-        <div class="explain" id="learnerExplain${qi}">
-          <span class="tag">Correct</span>
-          <p>${q.explanation||''}</p>
-        </div>`;
-      container.appendChild(block);
-      block.querySelectorAll(`.qopts-${qi} .opt`).forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          block.querySelectorAll(`.qopts-${qi} .opt`).forEach(b=>b.disabled=true);
-          const correct = btn.dataset.correct === 'true';
-          btn.classList.add(correct ? 'correct' : 'wrong');
-          if(!correct){
-            block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`).classList.add('correct');
-          }
-          block.querySelector(`#learnerExplain${qi}`).classList.add('show');
-          answered.add(qi);
-          checkAllAnswered();
-        });
-      });
-    }
-  });
+    });
+    if(!alreadyDone) checkAllAnswered();
+  }
 
-  checkAllAnswered();
+  renderInlineFlashcards(flashEl, mod.flashcards);
 }
 
 function renderGlossary(){
   const grid = document.getElementById('glossGrid');
-  const terms = (sampleGlossary['April Housing']||[]).filter(f=>f.published && f.term && f.definition);
+  const modules = sampleModules[currentClient?.name] || [];
+  const terms = modules.flatMap(m => (m.flashcards||[]).filter(f=>f.published && f.term && f.definition));
   if(terms.length===0){
     grid.innerHTML = `<p class="gloss-empty">No flashcards published yet.</p>`;
     return;
@@ -831,16 +970,28 @@ document.getElementById('glossOverlay').addEventListener('click', (e)=>{
   if(e.target.id==='glossOverlay') document.getElementById('glossOverlay').classList.remove('show');
 });
 
-document.querySelectorAll('.navitem').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.navitem').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('sidebar').classList.remove('open');
-  });
+document.getElementById('sbNav').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.navitem');
+  if(!btn) return;
+  activeLearnerModuleId = btn.dataset.moduleId;
+  renderLearnerNav();
+  renderActiveLearnerModule();
+  document.getElementById('sidebar').classList.remove('open');
+});
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(!currentLearner) return;
+  currentLearner.progress = {};
+  await sb.rpc('save_progress', { p_learner_id: currentLearner.id, p_progress: {}, p_completed: false });
+  const modules = sampleModules[currentClient?.name] || [];
+  activeLearnerModuleId = modules[0] ? modules[0].id : null;
+  renderLearnerNav();
+  renderActiveLearnerModule();
 });
 
 document.getElementById('switchUser').addEventListener('click', ()=>{
   document.getElementById('shell').classList.remove('active');
+  document.getElementById('sidebar').classList.remove('open');
   if(currentClient) localStorage.removeItem(sessionKeyFor(currentClient.slug));
   document.getElementById('signinScreen').style.display='flex';
 });
@@ -934,9 +1085,14 @@ function showShellForUser(client, user){
   document.getElementById('sbUserName').textContent = user.name || user.email;
   document.getElementById('sbUserEmail').textContent = user.email;
   document.getElementById('shell').classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
   currentClient = client;
-  renderLearnerQuiz();
-  renderGlossary();
+  currentLearner = user;
+  currentLearner.progress = user.progress || {};
+  const modules = sampleModules[client.name] || [];
+  activeLearnerModuleId = modules[0] ? modules[0].id : null;
+  renderLearnerNav();
+  renderActiveLearnerModule();
 }
 
 function setAuthMode(mode){
@@ -1130,8 +1286,7 @@ document.getElementById('clientCardsList').addEventListener('click', (e)=>{
     return;
   }
   if(e.target.dataset.role === 'managequizzes'){
-    loadClientQuiz(c.name);
-    loadClientGlossary(c.name);
+    loadClientModules(c.name);
     showAdminTab('quizzes');
     return;
   }
@@ -1162,7 +1317,7 @@ document.getElementById('clientCardsList').addEventListener('click', (e)=>{
       title:`Delete ${c.name} permanently?`,
       body:`<span class="danger-text">This cannot be undone.</span> Their site, all quiz content, and every user's progress will be permanently deleted right away.`,
       danger:true, confirmText:'Delete permanently', typeConfirmValue:c.name,
-      onConfirm:()=>{ clients.splice(idx,1); delete sampleQuizzes[c.name]; renderClientCards(); }
+      onConfirm:()=>{ clients.splice(idx,1); delete sampleModules[c.name]; delete activeModuleId[c.name]; renderClientCards(); }
     });
     return;
   }
@@ -1220,11 +1375,16 @@ document.getElementById('saveClientBtn').addEventListener('click', ()=>{
 
   if(editingIndex !== null){
     const old = clients[editingIndex];
-    if(old.name !== name){ sampleQuizzes[name] = sampleQuizzes[old.name]||[]; delete sampleQuizzes[old.name]; }
+    if(old.name !== name){
+      sampleModules[name] = sampleModules[old.name]||[];
+      delete sampleModules[old.name];
+      activeModuleId[name] = activeModuleId[old.name];
+      delete activeModuleId[old.name];
+    }
     clients[editingIndex] = {...old, name, slug, initials, logo: logo||old.logo};
   } else {
     clients.push({name, slug, initials, logo, archived:false});
-    sampleQuizzes[name] = [];
+    sampleModules[name] = [];
   }
   renderClientCards();
   document.getElementById('clientSavedToast').textContent = editingIndex!==null ? '✓ Changes saved' : "✓ Client added — their site is live at the URL above";
@@ -1236,30 +1396,33 @@ document.getElementById('saveClientBtn').addEventListener('click', ()=>{
   setTimeout(()=>document.getElementById('clientSavedToast').classList.remove('show'), 3500);
 });
 
-/* ---- per-client quiz management ---- */
-const sampleQuizzes = {
+/* ---- per-client quiz management (tabs/modules, each with its own questions + flashcards) ---- */
+const sampleModules = {
   'April Housing': [
-    {type:'mcq', question:"You want to see only projects tagged with a specific GL code. Where do you do that?",
-     options:["In the Reports tab","The GL Code filter on the Dashboard","Inside each individual project"], correctIndex:1,
-     explanation:"The filter row at the top of your Dashboard lets you narrow by Property, GL Code, Project Type, and a few others at once.", published:true},
-    {type:'mcq', question:"Where do you go to add a new vendor while inviting bidders?",
-     options:["Only from the main Vendors page","From the vendor-invite screen directly","You can't add one there"], correctIndex:1,
-     explanation:"The vendor-invite screen has an 'Add new Vendor or Contact' option right there, so you don't have to leave the flow.", published:true},
-    {type:'hotspot', question:"Upload a screenshot, then click the button learners should press to add a new cost item.",
-     image:'', explanation:'', published:false}
+    {
+      id:'mod-1', title:'Getting started',
+      questions:[
+        {type:'mcq', question:"You want to see only projects tagged with a specific GL code. Where do you do that?",
+         options:["In the Reports tab","The GL Code filter on the Dashboard","Inside each individual project"], correctIndex:1,
+         explanation:"The filter row at the top of your Dashboard lets you narrow by Property, GL Code, Project Type, and a few others at once.", published:true},
+        {type:'mcq', question:"Where do you go to add a new vendor while inviting bidders?",
+         options:["Only from the main Vendors page","From the vendor-invite screen directly","You can't add one there"], correctIndex:1,
+         explanation:"The vendor-invite screen has an 'Add new Vendor or Contact' option right there, so you don't have to leave the flow.", published:true},
+        {type:'hotspot', question:"Upload a screenshot, then click the button learners should press to add a new cost item.",
+         image:'', explanation:'', published:false}
+      ],
+      flashcards:[
+        {term:'GL Code', definition:'A General Ledger code used to categorize a cost item by type of work or expense.', published:true},
+        {term:'Draw', definition:"A request for payment against a project's budget, usually tied to completed work.", published:true}
+      ]
+    }
   ],
   'Morgan Properties': [], 'Clear Height': []
 };
 let qcardCounter = 0;
-
-const sampleGlossary = {
-  'April Housing': [
-    {term:'GL Code', definition:'A General Ledger code used to categorize a cost item by type of work or expense.', published:true},
-    {term:'Draw', definition:"A request for payment against a project's budget, usually tied to completed work.", published:true}
-  ],
-  'Morgan Properties': [], 'Clear Height': []
-};
 let fcCounter = 0;
+let moduleCounter = 0;
+let activeModuleId = {}; // per-client, which tab is selected in the admin builder right now
 
 function flashcardTemplate(f){
   const id = 'fc'+(fcCounter++);
@@ -1273,11 +1436,6 @@ function flashcardTemplate(f){
 
 function mountFlashcard(f){
   document.getElementById('glossCardList').insertAdjacentHTML('beforeend', flashcardTemplate(f));
-}
-
-function loadClientGlossary(clientName){
-  document.getElementById('glossCardList').innerHTML = '';
-  (sampleGlossary[clientName]||[]).forEach(f=>mountFlashcard(f));
 }
 
 document.getElementById('addFlashcardBtn').addEventListener('click', ()=>{
@@ -1587,12 +1745,100 @@ function mountQcard(q){
   return cardEl;
 }
 
-function loadClientQuiz(clientName){
-  document.getElementById('quizClientName').textContent = clientName;
-  document.getElementById('qcardList').innerHTML = '';
-  const qs = sampleQuizzes[clientName] || [];
-  qs.forEach(q => mountQcard(q));
+function moduleTabTemplate(m, clientName){
+  const isActive = activeModuleId[clientName] === m.id;
+  return `<div class="module-tab${isActive?' active':''}" data-id="${m.id}">
+    <span class="tablabel" data-role="tablabel">${m.title || 'Untitled tab'}</span>
+    <button type="button" class="tabdel" data-role="tabdel" title="Delete tab">✕</button>
+  </div>`;
 }
+
+function renderModuleTabBar(clientName){
+  const modules = sampleModules[clientName] || [];
+  document.getElementById('moduleTabBar').innerHTML =
+    modules.map(m=>moduleTabTemplate(m, clientName)).join('') +
+    `<button type="button" class="module-tab-add" id="addModuleTabBtn">+ Add tab</button>`;
+}
+
+function loadActiveModuleContent(clientName){
+  const modules = sampleModules[clientName] || [];
+  const mod = modules.find(m=>m.id===activeModuleId[clientName]);
+  document.getElementById('qcardList').innerHTML = '';
+  document.getElementById('glossCardList').innerHTML = '';
+  if(!mod) return;
+  (mod.questions||[]).forEach(q => mountQcard(q));
+  (mod.flashcards||[]).forEach(f => mountFlashcard(f));
+}
+
+function loadClientModules(clientName){
+  document.getElementById('quizClientName').textContent = clientName;
+  const modules = sampleModules[clientName] || [];
+  if(!activeModuleId[clientName] || !modules.find(m=>m.id===activeModuleId[clientName])){
+    activeModuleId[clientName] = modules[0] ? modules[0].id : null;
+  }
+  renderModuleTabBar(clientName);
+  loadActiveModuleContent(clientName);
+}
+
+document.getElementById('moduleTabBar').addEventListener('click', (e)=>{
+  const clientName = document.getElementById('quizClientName').textContent.trim();
+
+  if(e.target.id === 'addModuleTabBtn'){
+    const title = prompt('Name this tab (e.g. "Getting started"):', '');
+    if(title === null) return;
+    const mod = { id:'mod-'+(moduleCounter++)+'-'+Date.now(), title: title.trim()||'Untitled tab', questions:[], flashcards:[] };
+    (sampleModules[clientName] = sampleModules[clientName]||[]).push(mod);
+    activeModuleId[clientName] = mod.id;
+    renderModuleTabBar(clientName);
+    loadActiveModuleContent(clientName);
+    return;
+  }
+
+  const tabEl = e.target.closest('.module-tab');
+  if(!tabEl) return;
+
+  if(e.target.closest('[data-role="tabdel"]')){
+    const modules = sampleModules[clientName]||[];
+    const idx = modules.findIndex(m=>m.id===tabEl.dataset.id);
+    if(idx===-1) return;
+    const mod = modules[idx];
+    openModal({
+      title:'Delete this tab?',
+      body:`<em>"${mod.title}"</em> and its ${mod.questions.length} question(s) and ${mod.flashcards.length} flashcard(s) will be removed. This can't be undone.`,
+      danger:true, confirmText:'Delete tab',
+      onConfirm:()=>{
+        modules.splice(idx,1);
+        if(activeModuleId[clientName]===mod.id) activeModuleId[clientName] = modules[0] ? modules[0].id : null;
+        renderModuleTabBar(clientName);
+        loadActiveModuleContent(clientName);
+      }
+    });
+    return;
+  }
+
+  activeModuleId[clientName] = tabEl.dataset.id;
+  renderModuleTabBar(clientName);
+  loadActiveModuleContent(clientName);
+});
+
+document.getElementById('moduleTabBar').addEventListener('dblclick', (e)=>{
+  const labelEl = e.target.closest('[data-role="tablabel"]');
+  if(!labelEl) return;
+  const clientName = document.getElementById('quizClientName').textContent.trim();
+  const tabEl = labelEl.closest('.module-tab');
+  const mod = (sampleModules[clientName]||[]).find(m=>m.id===tabEl.dataset.id);
+  if(!mod) return;
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = mod.title;
+  labelEl.replaceWith(input);
+  input.focus(); input.select();
+  function commit(){
+    mod.title = input.value.trim() || 'Untitled tab';
+    renderModuleTabBar(clientName);
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', ev=>{ if(ev.key==='Enter') input.blur(); });
+});
 
 document.getElementById('backToClients').addEventListener('click', ()=> showAdminTab('clients'));
 
@@ -1754,9 +2000,14 @@ function collectFlashcardData(row){
 
 document.getElementById('publishQuizBtn').addEventListener('click', ()=>{
   const clientName = document.getElementById('quizClientName').textContent.trim();
+  const mod = (sampleModules[clientName]||[]).find(m=>m.id===activeModuleId[clientName]);
+  if(!mod){
+    openModal({ title:'Add a tab first', body:'Create a tab above before adding questions or flashcards.', confirmText:'Got it', onConfirm:()=>{} });
+    return;
+  }
 
   const cards = Array.from(document.querySelectorAll('#qcardList .qcard'));
-  sampleQuizzes[clientName] = cards.map(collectQcardData);
+  mod.questions = cards.map(collectQcardData);
   cards.forEach(card=>{
     const included = card.querySelector('[data-role="include"]').checked;
     const badge = card.querySelector('.qcard-badge');
@@ -1765,12 +2016,14 @@ document.getElementById('publishQuizBtn').addEventListener('click', ()=>{
   });
 
   const rows = Array.from(document.querySelectorAll('#glossCardList .flashcard-row'));
-  sampleGlossary[clientName] = rows.map(collectFlashcardData);
+  mod.flashcards = rows.map(collectFlashcardData);
 
   const t = document.getElementById('quizPublishedToast');
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 3500);
-  if(typeof renderLearnerQuiz==='function') renderLearnerQuiz();
+
+  if(typeof renderLearnerNav==='function') renderLearnerNav();
+  if(typeof renderActiveLearnerModule==='function') renderActiveLearnerModule();
   if(typeof renderGlossary==='function') renderGlossary();
 });
 </script>
