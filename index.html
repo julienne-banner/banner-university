@@ -106,7 +106,6 @@ main{min-width:0}
 
 /* quiz block */
 .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:22px 0;box-shadow:var(--shadow)}
-.quiz .qtag{font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-bottom:8px}
 .quiz .qtext{font-size:18px;font-weight:600;margin-bottom:18px;line-height:1.4}
 .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:9px;font-size:15px;font-weight:500;color:var(--ink);transition:all .12s}
 .opt:hover:not(:disabled){border-color:var(--coral);background:#fff}
@@ -314,7 +313,7 @@ main{min-width:0}
 .hs-imgwrap{position:relative;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;user-select:none;background:var(--bg)}
 .hs-imgwrap img{display:block;width:100%;height:auto;pointer-events:none}
 .hs-admin-wrap.mode-select{cursor:default}
-.hs-admin-wrap.mode-draw,.hs-admin-wrap.mode-focus{cursor:crosshair}
+.hs-admin-wrap.mode-draw,.hs-admin-wrap.mode-focus{cursor:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNiIgaGVpZ2h0PSIyNiIgdmlld0JveD0iMCAwIDI2IDI2Ij4KICA8bGluZSB4MT0iMTMiIHkxPSIxIiB4Mj0iMTMiIHkyPSIyNSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxsaW5lIHgxPSIxIiB5MT0iMTMiIHgyPSIyNSIgeTI9IjEzIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjEzIiB5MT0iMSIgeDI9IjEzIiB5Mj0iMjUiIHN0cm9rZT0iI0UxNTAzRCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxsaW5lIHgxPSIxIiB5MT0iMTMiIHgyPSIyNSIgeTI9IjEzIiBzdHJva2U9IiNFMTUwM0QiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8Y2lyY2xlIGN4PSIxMyIgY3k9IjEzIiByPSIzIiBmaWxsPSIjRTE1MDNEIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuMiIvPgo8L3N2Zz4=") 13 13, crosshair}
 .hs-admin-wrap:focus{outline:none}
 .hs-region{position:absolute;border-radius:5px;box-sizing:border-box;border:2px solid var(--teal);background:rgba(31,111,107,.14)}
 .hs-region.correctpick{border-color:var(--success);background:rgba(47,133,88,.18)}
@@ -839,7 +838,6 @@ function renderActiveLearnerModule(){
 
       if(q.type==='hotspot'){
         block.innerHTML = `
-          <div class="qtag">Quick check</div>
           <div class="qtext">${q.question||''}</div>
           ${q.image
             ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${q.image}"></div>`
@@ -905,7 +903,6 @@ function renderActiveLearnerModule(){
       } else {
         const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"${alreadyDone?' disabled':''}><span class="dot"></span> ${opt}</button>`).join('');
         block.innerHTML = `
-          <div class="qtag">Quick check</div>
           <div class="qtext">${q.question||''}</div>
           <div class="qopts-${qi}">${opts}</div>
           <div class="explain${alreadyDone?' show':''}" id="learnerExplain${qi}">
@@ -1933,8 +1930,10 @@ function hsWireWrap(cardEl){
   });
 }
 
-function hsInitCard(cardEl){
-  cardEl.hsState = { regions:[], focusArea:null, nextId:1, currentTool:'draw', selectedIds:new Set(), selectedFocus:false };
+function hsInitCard(cardEl, q){
+  const regions = (q && Array.isArray(q.regions)) ? q.regions.map(r=>({...r})) : [];
+  const maxId = regions.reduce((m,r)=>Math.max(m, r.id||0), 0);
+  cardEl.hsState = { regions, focusArea: (q && q.focusArea) ? {...q.focusArea} : null, nextId: maxId+1, currentTool:'draw', selectedIds:new Set(), selectedFocus:false };
   hsWireWrap(cardEl);
   hsSetTool(cardEl, 'draw');
   hsActiveCard = cardEl;
@@ -1946,7 +1945,7 @@ function mountQcard(q){
   temp.innerHTML = html;
   const cardEl = temp.firstElementChild;
   document.getElementById('qcardList').appendChild(cardEl);
-  if((q.type==='hotspot') && q.image) hsInitCard(cardEl);
+  if((q.type==='hotspot') && q.image) hsInitCard(cardEl, q);
   return cardEl;
 }
 
