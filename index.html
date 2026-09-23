@@ -717,13 +717,20 @@ function renderInlineFlashcards(containerEl, flashcards){
 
 async function markActiveModuleComplete(){
   if(!currentLearner || !activeLearnerModuleId) return;
-  const modules = sampleModules[currentClient?.name] || [];
-  const progress = { ...(currentLearner.progress||{}), [activeLearnerModuleId]: true };
-  const allComplete = modules.length>0 && modules.every(m=>progress[m.id]);
 
   const btn = document.getElementById('completeBtn');
   btn.disabled = true;
   btn.textContent = 'Saving…';
+
+  // re-fetch the current tab list right now, rather than trusting whatever
+  // was loaded at login — avoids wrongly marking "all done" if a tab was
+  // added to this client after this learner's session started.
+  const freshModules = await fetchModulesForClient(currentClient);
+  sampleModules[currentClient.name] = freshModules;
+  const modules = freshModules;
+
+  const progress = { ...(currentLearner.progress||{}), [activeLearnerModuleId]: true };
+  const allComplete = modules.length>0 && modules.every(m=>progress[m.id]);
 
   const { error } = await sb.rpc('save_progress', {
     p_learner_id: currentLearner.id, p_progress: progress, p_completed: allComplete
