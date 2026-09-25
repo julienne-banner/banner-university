@@ -124,6 +124,7 @@ main{min-width:0}
 .explain-shot .frame{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px;background:
   repeating-linear-gradient(45deg, #EEF1F4, #EEF1F4 10px, #F6F7F9 10px, #F6F7F9 20px)}
 .explain-shot .cap{padding:8px 12px;font-size:12px;color:var(--ink-faint);border-top:1px solid var(--line)}
+.explain-shot img{display:block;width:100%;height:auto}
 
 .modfooter{margin:36px 0 0;display:flex;align-items:center;gap:14px}
 .btn-next{background:var(--coral);color:#fff;border:0;border-radius:var(--radius-sm);padding:12px 22px;font-size:15px;font-weight:600}
@@ -717,7 +718,7 @@ function renderLearnerNav(){
     ? `<p style="padding:10px 11px;color:var(--ink-faint);font-size:13.5px;font-style:italic">No content published yet.</p>`
     : modules.map(m=>`
       <button class="navitem${m.id===activeLearnerModuleId?' active':''}${progress[m.id]?' done':''}" data-module-id="${m.id}" type="button">
-        ${m.title}<span class="tick">✓</span>
+        ${escapeHtml(m.title)}<span class="tick">✓</span>
       </button>`).join(''));
   updateProgressChrome();
 }
@@ -729,8 +730,8 @@ function renderInlineFlashcards(containerEl, flashcards){
     terms.map(f=>`
       <div class="flashcard">
         <div class="flashcard-inner">
-          <div class="flashcard-face flashcard-front">${f.term}</div>
-          <div class="flashcard-face flashcard-back">${f.definition}</div>
+          <div class="flashcard-face flashcard-front">${escapeHtml(f.term)}</div>
+          <div class="flashcard-face flashcard-back">${escapeHtml(f.definition)}</div>
         </div>
       </div>`).join('')
   }</div></div>`;
@@ -842,13 +843,14 @@ function renderActiveLearnerModule(){
 
       if(q.type==='hotspot'){
         block.innerHTML = `
-          <div class="qtext">${q.question||''}</div>
+          <div class="qtext">${escapeHtml(q.question)}</div>
           ${q.image
-            ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${q.image}"></div>`
+            ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${escapeHtml(q.image)}"></div>`
             : `<p style="color:var(--ink-faint);font-style:italic">This question isn't fully set up yet — no screenshot uploaded.</p>`}
           <div class="explain" id="learnerExplain${qi}">
             <span class="tag">Correct</span>
-            <p>${q.explanation || 'Nice job — that is the right spot.'}</p>
+            <p>${q.explanation ? escapeHtml(q.explanation) : 'Nice job — that is the right spot.'}</p>
+            ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
           </div>`;
         container.appendChild(block);
 
@@ -905,13 +907,14 @@ function renderActiveLearnerModule(){
           answered.add(qi);
         }
       } else {
-        const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"${alreadyDone?' disabled':''}><span class="dot"></span> ${opt}</button>`).join('');
+        const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"${alreadyDone?' disabled':''}><span class="dot"></span> ${escapeHtml(opt)}</button>`).join('');
         block.innerHTML = `
-          <div class="qtext">${q.question||''}</div>
+          <div class="qtext">${escapeHtml(q.question)}</div>
           <div class="qopts-${qi}">${opts}</div>
           <div class="explain${alreadyDone?' show':''}" id="learnerExplain${qi}">
             <span class="tag">Correct</span>
-            <p>${q.explanation||''}</p>
+            <p>${escapeHtml(q.explanation)}</p>
+            ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
           </div>`;
         container.appendChild(block);
         if(alreadyDone){
@@ -950,8 +953,8 @@ function renderGlossary(){
   grid.innerHTML = terms.map(f=>`
     <div class="flashcard">
       <div class="flashcard-inner">
-        <div class="flashcard-face flashcard-front">${f.term}</div>
-        <div class="flashcard-face flashcard-back">${f.definition}</div>
+        <div class="flashcard-face flashcard-front">${escapeHtml(f.term)}</div>
+        <div class="flashcard-face flashcard-back">${escapeHtml(f.definition)}</div>
       </div>
     </div>`).join('');
   grid.querySelectorAll('.flashcard').forEach(card=>{
@@ -1095,7 +1098,7 @@ async function loadProgressDashboard(){
     }).join('');
     return `<div class="client-group">
       <div class="client-group-head">
-        <div class="clogo">${c.initials||'?'}</div><h3>${c.name}</h3><span class="ccount">${learnersForClient.length} user${learnersForClient.length===1?'':'s'}</span>
+        <div class="clogo">${escapeHtml(c.initials)||'?'}</div><h3>${escapeHtml(c.name)}</h3><span class="ccount">${learnersForClient.length} user${learnersForClient.length===1?'':'s'}</span>
       </div>
       <table class="admin-table">
         <tr><th>Name</th><th>Email</th><th>Status</th></tr>
@@ -1123,6 +1126,19 @@ const SUPABASE_URL = 'https://lfvgjeeaskvpcxhluzuf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_AeAGZbYLByb8rbUCTVTD7g_ZTQ7l4EQ';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Escapes free text before it goes into any HTML string we build by hand.
+// Without this, a plain " (or <, >, &) typed into a question, answer,
+// term, or tab name can break the surrounding markup — which is exactly
+// what silently truncated your answer text and swallowed content after it.
+function escapeHtml(str){
+  return String(str==null ? '' : str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
 /* ---------- multi-tenant routing (client-specific links + admin gate) ---------- */
 let currentClient = null;
 let authMode = 'signup';
@@ -1144,7 +1160,7 @@ function routedSlug(){
 function sessionKeyFor(slug){ return 'banner_session_'+slug; }
 
 function setClientLogoEl(el, client){
-  el.innerHTML = client.logo ? `<img src="${client.logo}" alt="">` : '';
+  el.innerHTML = client.logo ? `<img src="${escapeHtml(client.logo)}" alt="">` : '';
   if(!client.logo) el.textContent = client.initials;
 }
 function brandSigninFor(client){
@@ -1163,7 +1179,7 @@ function dbQuestionToLocal(row){
     dbId: row.id, type: row.type, question: row.question || '',
     options: row.options || [], correctIndex: row.correct_index,
     image: row.image || '', regions: row.regions || [], focusArea: row.focus_area || null,
-    explanation: row.explanation || '', published: !!row.published
+    explanation: row.explanation || '', explanationImage: row.explanation_image || '', published: !!row.published
   };
 }
 function dbFlashcardToLocal(row){
@@ -1177,7 +1193,7 @@ function localQuestionToDbRow(q, moduleId, clientId, sortOrder){
     image: q.type==='hotspot' ? (q.image||'') : null,
     regions: q.type==='hotspot' ? (q.regions||[]) : null,
     focus_area: q.type==='hotspot' ? (q.focusArea||null) : null,
-    explanation: q.explanation || '', published: !!q.published, sort_order: sortOrder
+    explanation: q.explanation || '', explanation_image: q.explanationImage || '', published: !!q.published, sort_order: sortOrder
   };
 }
 function localFlashcardToDbRow(f, moduleId, clientId, sortOrder){
@@ -1412,22 +1428,22 @@ async function bootstrapRoute(){
 })();
 
 function clientCardTemplate(c, idx){
-  const logo = c.logo ? `<img src="${c.logo}">` : c.initials;
+  const logo = c.logo ? `<img src="${escapeHtml(c.logo)}">` : escapeHtml(c.initials);
   return `<div class="client-card" data-idx="${idx}">
     <button class="card-more-btn" type="button" data-role="morebtn">⋯</button>
     <div class="card-menu" data-role="cardmenu">
       <button type="button" data-role="archivebtn">Archive</button>
       <button type="button" class="danger" data-role="deletebtn">Delete permanently</button>
     </div>
-    <div class="chead"><div class="clogo">${logo}</div><h4>${c.name}</h4></div>
+    <div class="chead"><div class="clogo">${logo}</div><h4>${escapeHtml(c.name)}</h4></div>
     <div class="curl">yourdomain.com/${c.slug}</div>
     <div class="cactions"><button type="button" data-role="managequizzes">Manage quizzes</button><button type="button" data-role="editbtn">Edit</button></div>
   </div>`;
 }
 function archivedCardTemplate(c, idx){
-  const logo = c.logo ? `<img src="${c.logo}">` : c.initials;
+  const logo = c.logo ? `<img src="${escapeHtml(c.logo)}">` : escapeHtml(c.initials);
   return `<div class="client-card" data-idx="${idx}">
-    <div class="chead"><div class="clogo">${logo}</div><h4>${c.name}</h4></div>
+    <div class="chead"><div class="clogo">${logo}</div><h4>${escapeHtml(c.name)}</h4></div>
     <div class="curl">yourdomain.com/${c.slug}</div>
     <div class="cactions"><button type="button" data-role="restorebtn" style="flex:1">Restore</button></div>
   </div>`;
@@ -1464,7 +1480,7 @@ document.getElementById('clientCardsList').addEventListener('click', (e)=>{
     document.getElementById('clientPanelTitle').textContent = 'Edit client';
     document.getElementById('newClientName').value = c.name;
     document.getElementById('slugPreview').textContent = c.slug;
-    document.getElementById('logoPreviewWrap').innerHTML = c.logo ? `<div class="upload-preview" style="margin-top:10px"><img src="${c.logo}"><span class="fname">Current logo</span></div>` : '';
+    document.getElementById('logoPreviewWrap').innerHTML = c.logo ? `<div class="upload-preview" style="margin-top:10px"><img src="${escapeHtml(c.logo)}"><span class="fname">Current logo</span></div>` : '';
     document.getElementById('saveClientBtn').textContent = 'Save changes';
     document.getElementById('addClientPanel').style.display='block';
     document.getElementById('addClientPanel').scrollIntoView({behavior:'smooth', block:'center'});
@@ -1540,8 +1556,8 @@ document.getElementById('logoFileInput').addEventListener('change', (e)=>{
   reader.onload = (ev)=>{
     document.getElementById('logoPreviewWrap').innerHTML = `
       <div class="upload-preview" style="margin-top:10px">
-        <img src="${ev.target.result}">
-        <span class="fname">${file.name}</span>
+        <img src="${escapeHtml(ev.target.result)}">
+        <span class="fname">${escapeHtml(file.name)}</span>
         <button type="button" onclick="document.getElementById('logoPreviewWrap').innerHTML='';document.getElementById('logoFileInput').value='';">Remove</button>
       </div>`;
   };
@@ -1633,8 +1649,8 @@ let activeModuleId = {}; // per-client, which tab is selected in the admin build
 function flashcardTemplate(f){
   const id = 'fc'+(fcCounter++);
   return `<div class="flashcard-row" data-id="${id}">
-    <input type="text" class="fc-term" placeholder="Term" value="${f.term||''}">
-    <textarea class="fc-def" placeholder="Definition" rows="2">${f.definition||''}</textarea>
+    <input type="text" class="fc-term" placeholder="Term" value="${escapeHtml(f.term)}">
+    <textarea class="fc-def" placeholder="Definition" rows="2">${escapeHtml(f.definition)}</textarea>
     <label class="fc-include"><input type="checkbox" data-role="fcinclude" ${f.published?'checked':''}> Include</label>
     <button type="button" class="fc-remove" data-role="fcremove" title="Remove flashcard">✕</button>
   </div>`;
@@ -1659,7 +1675,7 @@ function mcqBody(q, id){
   const opts = (q.options||['','']).map((opt,i)=>`
     <div class="qcard-opt${i===q.correctIndex?' iscorrect':''}">
       <input type="radio" name="correct-${id}" data-role="correctradio" ${i===q.correctIndex?'checked':''}>
-      <input type="text" value="${opt}">
+      <input type="text" value="${escapeHtml(opt)}">
       <button type="button" class="opt-remove" data-role="removeopt" title="Remove this choice">✕</button>
     </div>`).join('');
   return `<div class="qcard-opts">${opts}</div>
@@ -1675,7 +1691,7 @@ function hotspotBody(q){
     </div>`;
   }
   return `<div class="hs-block" data-role="hsblock">
-    <div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${q.image}"></div>
+    <div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(q.image)}"></div>
     <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
     <div class="hs-tools" data-role="hsTools">
       <button class="hs-tool-btn" data-tool="select" type="button">🖱️ Select <span class="k">(S)</span></button>
@@ -1706,14 +1722,15 @@ function qcardTemplate(q){
       <button type="button" class="qtype-btn${type==='mcq'?' active':''}" data-role="settype" data-type="mcq">Multiple choice</button>
       <button type="button" class="qtype-btn${type==='hotspot'?' active':''}" data-role="settype" data-type="hotspot">Image hotspot</button>
     </div>
-    <textarea class="qcard-question" rows="2" placeholder="Type your question...">${q.question||''}</textarea>
+    <textarea class="qcard-question" rows="2" placeholder="Type your question...">${escapeHtml(q.question)}</textarea>
     <div class="qcard-body" data-role="qcardbody">${renderQcardBody(q, id)}</div>
     <div class="qcard-explain">
       <label>Explanation</label>
-      <textarea placeholder="Explain why this is correct...">${q.explanation||''}</textarea>
+      <textarea placeholder="Explain why this is correct...">${escapeHtml(q.explanation)}</textarea>
       <div class="qcard-shotwrap">
-        <div class="upload-box small" data-role="shotbox"><div class="uicon">📸</div><div class="utext">Click to upload a screenshot</div></div>
+        <div class="upload-box small" data-role="shotbox" style="${q.explanationImage?'display:none':''}"><div class="uicon">📸</div><div class="utext">Click to upload a screenshot</div></div>
         <input type="file" accept="image/*" style="display:none" data-role="shotinput">
+        ${q.explanationImage ? `<div class="upload-preview" style="margin-top:8px"><img src="${escapeHtml(q.explanationImage)}"><span class="fname">Current screenshot</span><button type="button" data-role="removeshot">Remove</button></div>` : ''}
       </div>
     </div>
     <label class="qcard-include"><input type="checkbox" data-role="include" ${q.published?'checked':''}> Include in published quiz</label>
@@ -1958,7 +1975,7 @@ function mountQcard(q){
 function moduleTabTemplate(m, clientName){
   const isActive = activeModuleId[clientName] === m.id;
   return `<div class="module-tab${isActive?' active':''}" data-id="${m.id}">
-    <span class="tablabel" data-role="tablabel">${m.title || 'Untitled tab'}</span>
+    <span class="tablabel" data-role="tablabel">${escapeHtml(m.title) || 'Untitled tab'}</span>
     <button type="button" class="tabdel" data-role="tabdel" title="Delete tab">✕</button>
   </div>`;
 }
@@ -2030,7 +2047,7 @@ document.getElementById('moduleTabBar').addEventListener('click', (e)=>{
     const mod = modules[idx];
     openModal({
       title:'Delete this tab?',
-      body:`<em>"${mod.title}"</em> and its ${mod.questions.length} question(s) and ${mod.flashcards.length} flashcard(s) will be removed. This can't be undone.`,
+      body:`<em>"${escapeHtml(mod.title)}"</em> and its ${mod.questions.length} question(s) and ${mod.flashcards.length} flashcard(s) will be removed. This can't be undone.`,
       danger:true, confirmText:'Delete tab',
       onConfirm:async ()=>{
         modules.splice(idx,1);
@@ -2112,7 +2129,7 @@ document.getElementById('qcardList').addEventListener('click', (e)=>{
     const qPreview = card.querySelector('.qcard-question').value.trim();
     openModal({
       title:'Remove this question?',
-      body:`${qPreview ? `<em>"${qPreview.slice(0,80)}${qPreview.length>80?'…':''}"</em><br><br>` : ''}This can't be undone.`,
+      body:`${qPreview ? `<em>"${escapeHtml(qPreview.slice(0,80))}${qPreview.length>80?'…':''}"</em><br><br>` : ''}This can't be undone.`,
       danger:true, confirmText:'Remove question',
       onConfirm:()=> card.remove()
     });
@@ -2189,7 +2206,7 @@ document.getElementById('qcardList').addEventListener('change', (e)=>{
         preview.style.marginTop='8px';
         wrap.appendChild(preview);
       }
-      preview.innerHTML = `<img src="${ev.target.result}"><span class="fname">${file.name}</span><button type="button" data-role="removeshot">Remove</button>`;
+      preview.innerHTML = `<img src="${escapeHtml(ev.target.result)}"><span class="fname">${escapeHtml(file.name)}</span><button type="button" data-role="removeshot">Remove</button>`;
     };
     reader.readAsDataURL(file);
     return;
@@ -2227,12 +2244,14 @@ function collectQcardData(card){
   const question = card.querySelector('.qcard-question').value;
   const explanation = card.querySelector('.qcard-explain textarea').value;
   const published = card.querySelector('[data-role="include"]').checked;
+  const shotImgEl = card.querySelector('.qcard-shotwrap .upload-preview img');
+  const explanationImage = shotImgEl ? shotImgEl.getAttribute('src') : '';
 
   if(type==='hotspot'){
     const state = card.hsState || {regions:[], focusArea:null};
     const imgEl = card.querySelector('[data-role="hsWrap"] img');
     return {
-      type:'hotspot', question, explanation, published,
+      type:'hotspot', question, explanation, published, explanationImage,
       image: imgEl ? imgEl.getAttribute('src') : '',
       regions: (state.regions||[]).map(r=>({x:r.x,y:r.y,w:r.w,h:r.h,correct:!!r.correct})),
       focusArea: state.focusArea ? {x:state.focusArea.x,y:state.focusArea.y,w:state.focusArea.w,h:state.focusArea.h} : null
@@ -2245,7 +2264,7 @@ function collectQcardData(card){
   }));
   let correctIndex = opts.findIndex(o=>o.correct);
   if(correctIndex===-1) correctIndex = 0;
-  return { type:'mcq', question, explanation, published, options: opts.map(o=>o.text), correctIndex };
+  return { type:'mcq', question, explanation, published, explanationImage, options: opts.map(o=>o.text), correctIndex };
 }
 
 function collectFlashcardData(row){
