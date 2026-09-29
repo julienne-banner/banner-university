@@ -155,10 +155,9 @@ main{min-width:0}
 .admin-table td.actions-cell{position:relative;text-align:right;width:44px}
 .row-more-btn{background:none;border:0;color:var(--ink-faint);font-size:16px;padding:4px 9px;border-radius:6px;line-height:1}
 .row-more-btn:hover{background:var(--bg);color:var(--ink)}
-.row-menu{display:none;position:absolute;right:10px;top:38px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:20;min-width:160px;overflow:hidden}
-.row-menu.show{display:block}
-.row-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 14px;font-size:13.5px;color:var(--coral-deep)}
-.row-menu button:hover{background:var(--coral-soft)}
+.row-menu-floating{display:none;position:fixed;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:300;min-width:160px;overflow:hidden}
+.row-menu-floating button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 14px;font-size:13.5px;color:var(--coral-deep)}
+.row-menu-floating button:hover{background:var(--coral-soft)}
 .admin-table th{text-align:left;font-size:12px;font-weight:600;color:var(--ink-faint);padding:10px 18px;background:var(--bg);border-bottom:1px solid var(--line)}
 .admin-table td{padding:13px 18px;border-bottom:1px solid var(--line-soft);font-size:14.5px}
 .admin-table tr:last-child td{border-bottom:0}
@@ -340,19 +339,17 @@ main{min-width:0}
 
 /* ---------- client-admin dashboard layout ---------- */
 .ca-shell{display:grid;grid-template-columns:272px 1fr;min-height:100vh}
-.ca-sidebar{background:var(--surface);border-right:1px solid var(--line);padding:26px 22px;display:flex;flex-direction:column;min-height:100vh}
-.ca-sb-top .sb-brand{margin-bottom:12px}
-.ca-sb-tag{font-size:11.5px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;padding-left:1px}
-.ca-sb-divider{height:1px;background:var(--line-soft);margin:20px 0}
+.ca-sidebar{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:100vh}
+.ca-sb-profile{padding:20px 22px 0}
 .ca-sb-profile .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);margin-bottom:5px}
 .ca-sb-profile .uemail{font-size:13px;color:var(--ink-soft);word-break:break-all;line-height:1.4}
-.ca-sidebar-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:24px}
+.ca-sidebar-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:20px 22px;border-top:1px solid var(--line-soft)}
 .ca-main{padding:40px 44px}
 .ca-main h1{font-size:24px;margin-bottom:22px}
 @media (max-width:880px){
   .ca-shell{grid-template-columns:1fr}
   .ca-sidebar{min-height:auto}
-  .ca-sidebar-actions{margin-top:20px;flex-direction:row;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--line-soft)}
+  .ca-sidebar-actions{margin-top:0;flex-direction:row;flex-wrap:wrap}
   .ca-main{padding:24px 20px}
 }
 
@@ -579,15 +576,10 @@ main{min-width:0}
 <div class="admin" id="clientAdminView">
   <div class="ca-shell">
     <aside class="ca-sidebar">
-      <div class="ca-sb-top">
-        <div class="sb-brand">
-          <div class="client-logo" id="caSbClientLogo">AH</div>
-          <span class="cname" id="caSbClientName">April Housing</span>
-        </div>
-        <div class="ca-sb-tag">Admin dashboard</div>
+      <div class="sb-brand">
+        <div class="client-logo" id="caSbClientLogo">AH</div>
+        <span class="cname" id="caSbClientName">April Housing</span>
       </div>
-
-      <div class="ca-sb-divider"></div>
 
       <div class="ca-sb-profile">
         <div class="label">Signed in as</div>
@@ -768,6 +760,10 @@ main{min-width:0}
     <p class="sub" id="celebrationScoreText">You scored 92% on this section.</p>
     <button type="button" class="btn-primary" id="celebrationContinueBtn" style="margin-top:6px">Continue</button>
   </div>
+</div>
+
+<div class="row-menu-floating" id="floatingRowMenu">
+  <button type="button" data-role="resetprogress">Reset progress</button>
 </div>
 
 <div class="gloss-overlay" id="activityLogOverlay">
@@ -951,11 +947,16 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
   let idx = 0;
 
   function showNextControl(isLast){
+    if(isLast){
+      // last step — no button needed, this question auto-completes itself
+      setTimeout(()=>{ onQuestionDone(); }, 900);
+      return;
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn-next';
     btn.style.marginTop = '14px';
-    btn.textContent = isLast ? 'Done with this task' : 'Next step →';
+    btn.textContent = 'Next step →';
     block.appendChild(btn);
     btn.addEventListener('click', ()=>{
       idx++;
@@ -1335,51 +1336,59 @@ function learnerRowTemplate(l, statusFor, overallScoreFor){
     <td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td>
     <td>${overallScoreFor(l)}</td>
     <td class="actions-cell">
-      <button type="button" class="row-more-btn" data-role="rowmore">⋮</button>
-      <div class="row-menu" data-role="rowmenu">
-        <button type="button" data-role="resetprogress" data-learner-id="${l.id}" data-learner-name="${escapeHtml(l.name||l.email)}">Reset progress</button>
-      </div>
+      <button type="button" class="row-more-btn" data-role="rowmore" data-learner-id="${l.id}" data-learner-name="${escapeHtml(l.name||l.email)}">⋮</button>
     </td>
   </tr>`;
 }
 
 function handleDashboardRowMenuClick(e){
-  if(e.target.closest('[data-role="rowmore"]')){
-    const btn = e.target.closest('[data-role="rowmore"]');
-    const menu = btn.nextElementSibling;
-    document.querySelectorAll('.row-menu.show').forEach(m=>{ if(m!==menu) m.classList.remove('show'); });
-    menu.classList.toggle('show');
+  const moreBtn = e.target.closest('[data-role="rowmore"]');
+  if(moreBtn){
+    e.stopPropagation();
+    const menu = document.getElementById('floatingRowMenu');
+    const rect = moreBtn.getBoundingClientRect();
+    menu.dataset.learnerId = moreBtn.dataset.learnerId;
+    menu.dataset.learnerName = moreBtn.dataset.learnerName;
+    menu.style.display = 'block';
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.right = (window.innerWidth - rect.right) + 'px';
+    menu.style.left = 'auto';
     return;
   }
-  if(e.target.closest('[data-role="resetprogress"]')){
-    const btn = e.target.closest('[data-role="resetprogress"]');
-    const learnerId = btn.dataset.learnerId;
-    const learnerName = btn.dataset.learnerName;
-    document.querySelectorAll('.row-menu.show').forEach(m=>m.classList.remove('show'));
-    openModal({
-      title:`Reset ${learnerName}'s progress?`,
-      body:`They'll need to redo every section from scratch, and their current score will be cleared. This can't be undone.`,
-      danger:true, confirmText:'Reset progress',
-      onConfirm: async ()=>{
-        const { error } = await sb.rpc('admin_reset_learner_progress', { p_learner_id: learnerId });
-        if(error){
-          console.error('Reset failed:', error);
-          openModal({ title:'Reset failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
-          return;
-        }
-        if(document.getElementById('adminView').classList.contains('active')) loadProgressDashboard();
-        if(document.getElementById('clientAdminView').classList.contains('active')) loadClientAdminDashboard(currentClientAdminClient);
-      }
-    });
-  }
 }
+
+document.getElementById('floatingRowMenu').addEventListener('click', async (e)=>{
+  if(!e.target.closest('[data-role="resetprogress"]')) return;
+  const menu = document.getElementById('floatingRowMenu');
+  const learnerId = menu.dataset.learnerId;
+  const learnerName = menu.dataset.learnerName;
+  menu.style.display = 'none';
+  openModal({
+    title:`Reset ${learnerName}'s progress?`,
+    body:`They'll need to redo every section from scratch, and their current score will be cleared. This can't be undone.`,
+    danger:true, confirmText:'Reset progress',
+    onConfirm: async ()=>{
+      const { error } = await sb.rpc('admin_reset_learner_progress', { p_learner_id: learnerId });
+      if(error){
+        console.error('Reset failed:', error);
+        openModal({ title:'Reset failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
+        return;
+      }
+      if(document.getElementById('adminView').classList.contains('active')) loadProgressDashboard();
+      if(document.getElementById('clientAdminView').classList.contains('active')) loadClientAdminDashboard(currentClientAdminClient);
+    }
+  });
+});
 document.getElementById('progressDashboard').addEventListener('click', handleDashboardRowMenuClick);
 document.getElementById('clientAdminDashboard').addEventListener('click', handleDashboardRowMenuClick);
 document.addEventListener('click', (e)=>{
-  if(!e.target.closest('[data-role="rowmore"]') && !e.target.closest('[data-role="rowmenu"]')){
-    document.querySelectorAll('.row-menu.show').forEach(m=>m.classList.remove('show'));
+  if(!e.target.closest('[data-role="rowmore"]') && !e.target.closest('#floatingRowMenu')){
+    document.getElementById('floatingRowMenu').style.display = 'none';
   }
 });
+document.addEventListener('scroll', ()=>{
+  document.getElementById('floatingRowMenu').style.display = 'none';
+}, true);
 
 async function loadActivityLog(){
   const el = document.getElementById('activityLogList');
