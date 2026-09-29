@@ -297,9 +297,30 @@ main{min-width:0}
 .module-tab-add{background:none;border:1.5px dashed var(--line);border-radius:9px;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
 .module-tab-add:hover{border-color:var(--coral);color:var(--coral-deep)}
 
+/* ---------- hotspot slide navigator (admin, multi-step questions) ---------- */
+.hs-slide-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.hs-slide-chip{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:7px;padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.hs-slide-chip.active{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+.hs-slide-del{opacity:.55;font-size:11px}
+.hs-slide-del:hover{opacity:1;color:var(--coral-deep)}
+.hs-slide-add{background:none;border:1.5px dashed var(--line);border-radius:7px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.hs-slide-add:hover{border-color:var(--coral);color:var(--coral-deep)}
+
 /* ---------- inline per-module flashcards (learner) ---------- */
 .inline-flashcards{margin:28px 0}
 .inline-flashcards h3{font-size:15px;margin-bottom:12px;color:var(--ink)}
+
+/* ---------- multi-step hotspot (learner) ---------- */
+.hs-step-indicator{display:inline-block;font-size:11.5px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+.hs-slide-note{display:none;margin-top:12px;padding:9px 13px;border-radius:8px;font-size:13.5px;font-weight:600}
+.hs-slide-note.show{display:block}
+.hs-slide-note.correct{background:var(--success-soft);color:var(--success)}
+.hs-slide-note.wrong{background:var(--coral-soft);color:var(--coral-deep)}
+
+/* ---------- scored-assessment warning screen ---------- */
+.start-warning{border:1.5px solid var(--coral);background:var(--coral-soft)}
+.start-warning .warn-tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--coral-deep);background:#fff;padding:3px 10px;border-radius:99px;margin-bottom:12px}
+.score-pill{display:inline-block;font-size:12.5px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:4px 11px;border-radius:99px;margin-bottom:14px}
 
 /* ---------- signup/login toggle + errors ---------- */
 .auth-toggle{display:flex;gap:6px;margin:18px 0 4px;background:var(--bg);border-radius:10px;padding:4px}
@@ -496,6 +517,43 @@ main{min-width:0}
   </div>
 </div>
 
+<!-- ============ CLIENT ADMIN ACCESS GATE ============ -->
+<div class="signin-screen" id="clientAdminGateScreen" style="display:none">
+  <div class="signin-card">
+    <div class="client-brand">
+      <div class="client-logo" id="caGateClientLogo">AH</div>
+      <span class="cname" id="caGateClientName">April Housing</span>
+    </div>
+    <h1>Admin access</h1>
+    <p class="sub">Log in to view your team's training participation and scores.</p>
+    <form id="clientAdminGateForm">
+      <div class="field">
+        <label for="caEmail">Email</label>
+        <input id="caEmail" type="email" placeholder="you@example.com" required>
+      </div>
+      <div class="field">
+        <label for="caPassword">Password</label>
+        <input id="caPassword" type="password" placeholder="••••••••" required>
+      </div>
+      <p class="auth-error" id="clientAdminGateError" style="display:none">Incorrect email or password.</p>
+      <button type="submit" class="btn-primary" id="clientAdminGateSubmitBtn">Enter</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ CLIENT ADMIN DASHBOARD (read-only) ============ -->
+<div class="admin" id="clientAdminView">
+  <div class="admin-screen active">
+    <button class="admin-back-btn" id="clientAdminLogoutBtn">← Log out</button>
+    <div class="section-head">
+      <h2>Training participation — <span id="caClientName">—</span></h2>
+    </div>
+    <div id="clientAdminDashboard">
+      <p style="color:var(--ink-faint);font-style:italic">Loading…</p>
+    </div>
+  </div>
+</div>
+
 <!-- ============ APP SHELL ============ -->
 <div class="shell" id="shell">
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -524,7 +582,6 @@ main{min-width:0}
     </nav>
     <div class="sb-foot">
       <button class="sb-footbtn" id="glossBtn" type="button">📖 Glossary reference</button>
-      <button class="sb-footbtn danger" id="resetBtn" type="button">Reset my progress</button>
     </div>
   </aside>
 
@@ -694,12 +751,15 @@ document.getElementById('sidebarBackdrop').addEventListener('click', closeMobile
 
 let currentLearner = null;
 let activeLearnerModuleId = null;
+let currentClientAdminClient = null;
+let tabStartConfirmed = {}; // moduleId -> true once the learner has clicked past the scored-assessment warning, this session
+let currentModuleScore = { correct: 0, total: 0 }; // tallied fresh each time the active module renders
 
 function computeProgressPct(){
   const modules = sampleModules[currentClient?.name] || [];
   if(modules.length===0) return 0;
   const progress = (currentLearner && currentLearner.progress) || {};
-  const done = modules.filter(m=>progress[m.id]).length;
+  const done = modules.filter(m=>progress[m.id] && progress[m.id].done).length;
   return Math.round((done/modules.length)*100);
 }
 
@@ -717,7 +777,7 @@ function renderLearnerNav(){
   nav.innerHTML = `<div class="navlabel">Contents</div>` + (modules.length===0
     ? `<p style="padding:10px 11px;color:var(--ink-faint);font-size:13.5px;font-style:italic">No content published yet.</p>`
     : modules.map(m=>`
-      <button class="navitem${m.id===activeLearnerModuleId?' active':''}${progress[m.id]?' done':''}" data-module-id="${m.id}" type="button">
+      <button class="navitem${m.id===activeLearnerModuleId?' active':''}${progress[m.id] && progress[m.id].done?' done':''}" data-module-id="${m.id}" type="button">
         ${escapeHtml(m.title)}<span class="tick">✓</span>
       </button>`).join(''));
   updateProgressChrome();
@@ -754,8 +814,14 @@ async function markActiveModuleComplete(){
   sampleModules[currentClient.name] = freshModules;
   const modules = freshModules;
 
-  const progress = { ...(currentLearner.progress||{}), [activeLearnerModuleId]: true };
-  const allComplete = modules.length>0 && modules.every(m=>progress[m.id]);
+  const scorePct = currentModuleScore.total > 0
+    ? Math.round((currentModuleScore.correct / currentModuleScore.total) * 100)
+    : 100;
+  const progress = {
+    ...(currentLearner.progress||{}),
+    [activeLearnerModuleId]: { done:true, correct: currentModuleScore.correct, total: currentModuleScore.total, scorePct }
+  };
+  const allComplete = modules.length>0 && modules.every(m=>progress[m.id] && progress[m.id].done);
 
   const { error } = await sb.rpc('save_progress', {
     p_learner_id: currentLearner.id, p_progress: progress, p_completed: allComplete
@@ -770,14 +836,116 @@ async function markActiveModuleComplete(){
   }
 
   currentLearner.progress = progress;
-  btn.textContent = '✓ Completed';
+  btn.textContent = `✓ Completed — ${scorePct}%`;
   renderLearnerNav();
 
   // nice touch: auto-advance to the next unfinished module, if any
-  const next = modules.find(m=>!progress[m.id]);
+  const next = modules.find(m=>!(progress[m.id] && progress[m.id].done));
   if(next){
-    setTimeout(()=>{ activeLearnerModuleId = next.id; renderLearnerNav(); renderActiveLearnerModule(); }, 700);
+    setTimeout(()=>{ activeLearnerModuleId = next.id; renderLearnerNav(); renderActiveLearnerModule(); }, 900);
   }
+}
+
+function renderStartWarning(mod){
+  document.getElementById('pageEyebrow').textContent = 'Module';
+  document.getElementById('pageTitle').textContent = mod.title;
+  document.getElementById('pageCrumb').textContent = mod.title;
+  document.getElementById('learnerModuleFlashcards').innerHTML = '';
+  const completeBtn = document.getElementById('completeBtn');
+  completeBtn.style.display = 'none';
+  document.getElementById('gateHint').textContent = '';
+  document.getElementById('learnerQuizList').innerHTML = `
+    <div class="quiz start-warning">
+      <span class="warn-tag">⚠️ Scored assessment</span>
+      <p style="font-size:15px;line-height:1.6;margin:0">This section is scored, and you get <strong>one attempt per question</strong>. Once you answer, that's your final answer — it gets recorded as your score and can't be retaken. Take your time and read each question carefully before you click.</p>
+      <button type="button" class="btn-primary" id="startQuizBtn" style="margin-top:16px">Start this section</button>
+    </div>`;
+  document.getElementById('startQuizBtn').addEventListener('click', ()=>{
+    tabStartConfirmed[mod.id] = true;
+    renderActiveLearnerModule();
+  });
+}
+
+function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestionDone){
+  const slides = (q.slides && q.slides.length) ? q.slides : [{image:'', regions:[], focusArea:null}];
+  let idx = 0;
+
+  function showNextControl(isLast){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-next';
+    btn.style.marginTop = '14px';
+    btn.textContent = isLast ? 'Done with this task' : 'Next step →';
+    block.appendChild(btn);
+    btn.addEventListener('click', ()=>{
+      idx++;
+      if(idx>=slides.length){ onQuestionDone(); return; }
+      renderSlide();
+    });
+  }
+
+  function renderSlide(){
+    const slide = slides[idx];
+    block.innerHTML = `
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      ${slides.length>1 ? `<div class="hs-step-indicator">Step ${idx+1} of ${slides.length}</div>` : ''}
+      ${slide.image
+        ? `<div class="hs-imgwrap" id="hsSlideWrap${qi}" style="margin-bottom:14px"><img src="${escapeHtml(slide.image)}"></div>`
+        : `<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>`}
+      <div class="hs-slide-note" id="hsSlideNote${qi}"></div>
+    `;
+
+    if(!slide.image){ showNextControl(idx>=slides.length-1); return; }
+
+    const wrap = block.querySelector(`#hsSlideWrap${qi}`);
+    if(slide.focusArea){
+      const fb = document.createElement('div');
+      fb.className = 'hs-learner-focusbox';
+      fb.style.left=slide.focusArea.x+'%'; fb.style.top=slide.focusArea.y+'%'; fb.style.width=slide.focusArea.w+'%'; fb.style.height=slide.focusArea.h+'%';
+      wrap.appendChild(fb);
+    }
+    const built = (slide.regions||[]).map(r=>{
+      const el = document.createElement('div');
+      el.className = 'hs-hotspot';
+      el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
+      wrap.appendChild(el);
+      const badge = document.createElement('div');
+      badge.className = 'hs-badge';
+      badge.style.left = `calc(${r.x + r.w}% - 10px)`;
+      badge.style.top = `calc(${r.y}% - 10px)`;
+      wrap.appendChild(badge);
+      return {r, el, badge};
+    });
+
+    if(alreadyDone){
+      built.forEach(({r,el,badge})=>{ if(r.correct){ el.classList.add('is-correct'); badge.classList.add('show','right'); badge.textContent='✓'; } el.style.pointerEvents='none'; });
+      showNextControl(idx>=slides.length-1);
+      return;
+    }
+
+    built.forEach(({r,el,badge})=>{
+      el.addEventListener('click', ()=>{
+        built.forEach(other=>{
+          other.el.style.pointerEvents = 'none';
+          if(other.r.correct){ other.el.classList.add('is-correct'); other.badge.classList.add('show','right'); other.badge.textContent='✓'; }
+        });
+        const noteEl = block.querySelector(`#hsSlideNote${qi}`);
+        if(r.correct){
+          el.classList.add('pop');
+          noteEl.textContent = '✓ Correct.';
+          noteEl.className = 'hs-slide-note show correct';
+        } else {
+          el.classList.add('tried-wrong','shake');
+          noteEl.textContent = '✕ Not quite — the correct spot is highlighted above.';
+          noteEl.className = 'hs-slide-note show wrong';
+        }
+        onSlideResult(r.correct);
+        showNextControl(idx>=slides.length-1);
+      });
+    });
+  }
+
+  renderSlide();
 }
 
 function renderActiveLearnerModule(){
@@ -788,6 +956,7 @@ function renderActiveLearnerModule(){
   const completeBtn = document.getElementById('completeBtn');
   const gateHint = document.getElementById('gateHint');
   completeBtn.onclick = markActiveModuleComplete;
+  completeBtn.style.display = '';
 
   if(!mod){
     document.getElementById('pageEyebrow').textContent = 'Module';
@@ -801,14 +970,29 @@ function renderActiveLearnerModule(){
     return;
   }
 
+  const alreadyDone = !!(currentLearner && currentLearner.progress && currentLearner.progress[mod.id] && currentLearner.progress[mod.id].done);
+
+  if(!alreadyDone && !tabStartConfirmed[mod.id]){
+    renderStartWarning(mod);
+    return;
+  }
+
   document.getElementById('pageEyebrow').textContent = 'Module';
   document.getElementById('pageTitle').textContent = mod.title;
   document.getElementById('pageCrumb').textContent = mod.title;
 
-  const alreadyDone = !!(currentLearner && currentLearner.progress && currentLearner.progress[mod.id]);
   const questions = (mod.questions||[]).filter(q=>q.published);
   container.innerHTML = '';
   const answered = new Set();
+  currentModuleScore = { correct: 0, total: 0 };
+
+  const priorScore = currentLearner && currentLearner.progress && currentLearner.progress[mod.id];
+  if(alreadyDone && priorScore && typeof priorScore.scorePct === 'number'){
+    const pill = document.createElement('div');
+    pill.className = 'score-pill';
+    pill.textContent = `Your score: ${priorScore.scorePct}% (${priorScore.correct}/${priorScore.total})`;
+    container.appendChild(pill);
+  }
 
   function checkAllAnswered(){
     if(alreadyDone){ return; }
@@ -834,79 +1018,38 @@ function renderActiveLearnerModule(){
   }
 
   if(questions.length===0){
-    container.innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">No questions published yet for this section.</p></div>`;
+    container.innerHTML += `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">No questions published yet for this section.</p></div>`;
     if(!alreadyDone) checkAllAnswered();
   } else {
     questions.forEach((q,qi)=>{
       const block = document.createElement('div');
       block.className = 'quiz';
+      container.appendChild(block);
 
       if(q.type==='hotspot'){
-        block.innerHTML = `
-          <div class="qtext">${escapeHtml(q.question)}</div>
-          ${q.image
-            ? `<div class="hs-imgwrap" id="learnerHs${qi}" style="margin-bottom:14px"><img src="${escapeHtml(q.image)}"></div>`
-            : `<p style="color:var(--ink-faint);font-style:italic">This question isn't fully set up yet — no screenshot uploaded.</p>`}
-          <div class="explain" id="learnerExplain${qi}">
-            <span class="tag">Correct</span>
-            <p>${q.explanation ? escapeHtml(q.explanation) : 'Nice job — that is the right spot.'}</p>
-            ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
-          </div>`;
-        container.appendChild(block);
+        const slides = (q.slides && q.slides.length) ? q.slides : [{image:'', regions:[], focusArea:null}];
+        const scorableCount = slides.filter(s=>s.image).length;
+        if(!alreadyDone) currentModuleScore.total += scorableCount;
 
-        if(q.image){
-          const wrap = block.querySelector(`#learnerHs${qi}`);
-          let solved = alreadyDone;
-          if(q.focusArea){
-            const fb = document.createElement('div');
-            fb.className = 'hs-learner-focusbox';
-            fb.style.left=q.focusArea.x+'%'; fb.style.top=q.focusArea.y+'%'; fb.style.width=q.focusArea.w+'%'; fb.style.height=q.focusArea.h+'%';
-            wrap.appendChild(fb);
+        renderHotspotSlides(block, q, qi, alreadyDone,
+          (wasCorrect)=>{ if(wasCorrect) currentModuleScore.correct++; },
+          ()=>{
+            if(q.explanation || q.explanationImage){
+              const wrap = document.createElement('div');
+              wrap.className = 'explain show';
+              wrap.innerHTML = `
+                <span class="tag">Notes</span>
+                <p>${escapeHtml(q.explanation)}</p>
+                ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
+              `;
+              block.appendChild(wrap);
+            }
+            answered.add(qi);
+            checkAllAnswered();
           }
-          const built = (q.regions||[]).map(r=>{
-            const el = document.createElement('div');
-            el.className = 'hs-hotspot';
-            el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
-            wrap.appendChild(el);
-            const badge = document.createElement('div');
-            badge.className = 'hs-badge';
-            badge.style.left = `calc(${r.x + r.w}% - 10px)`;
-            badge.style.top = `calc(${r.y}% - 10px)`;
-            wrap.appendChild(badge);
-            return {r, el, badge};
-          });
-          if(alreadyDone){
-            built.forEach(({r,el,badge})=>{ if(r.correct){ el.classList.add('is-correct'); badge.classList.add('show','right'); badge.textContent='✓'; } el.style.pointerEvents='none'; });
-            block.querySelector(`#learnerExplain${qi}`).classList.add('show');
-          }
-          built.forEach(({r,el,badge})=>{
-            el.addEventListener('click', ()=>{
-              if(solved || el.dataset.tried) return;
-              if(r.correct){
-                solved = true;
-                built.forEach(other=>{
-                  if(other.r.correct){
-                    other.el.classList.add('is-correct');
-                    other.badge.classList.add('show','right'); other.badge.textContent='✓';
-                    if(other.el===el) other.el.classList.add('pop');
-                  }
-                  other.el.style.pointerEvents = 'none';
-                });
-                block.querySelector(`#learnerExplain${qi}`).classList.add('show');
-                answered.add(qi);
-                checkAllAnswered();
-              } else {
-                el.dataset.tried = '1';
-                el.classList.add('tried-wrong','shake');
-                badge.classList.add('show','wrong'); badge.textContent='✕';
-                setTimeout(()=>el.classList.remove('shake'), 400);
-              }
-            });
-          });
-        } else {
-          answered.add(qi);
-        }
+        );
       } else {
+        if(!alreadyDone) currentModuleScore.total += 1;
         const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}"${alreadyDone?' disabled':''}><span class="dot"></span> ${escapeHtml(opt)}</button>`).join('');
         block.innerHTML = `
           <div class="qtext">${escapeHtml(q.question)}</div>
@@ -916,7 +1059,6 @@ function renderActiveLearnerModule(){
             <p>${escapeHtml(q.explanation)}</p>
             ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
           </div>`;
-        container.appendChild(block);
         if(alreadyDone){
           const correctBtn = block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`);
           if(correctBtn) correctBtn.classList.add('correct');
@@ -930,6 +1072,7 @@ function renderActiveLearnerModule(){
               block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`).classList.add('correct');
             }
             block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+            if(correct) currentModuleScore.correct++;
             answered.add(qi);
             checkAllAnswered();
           });
@@ -980,23 +1123,6 @@ document.getElementById('sbNav').addEventListener('click', (e)=>{
   renderLearnerNav();
   renderActiveLearnerModule();
   closeMobileSidebar();
-});
-
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(!currentLearner) return;
-  openModal({
-    title:'Reset your progress?',
-    body:'Every tab you\'ve completed will be marked as not-done again. This can\'t be undone.',
-    danger:true, confirmText:'Reset progress',
-    onConfirm: async ()=>{
-      currentLearner.progress = {};
-      await sb.rpc('save_progress', { p_learner_id: currentLearner.id, p_progress: {}, p_completed: false });
-      const modules = sampleModules[currentClient?.name] || [];
-      activeLearnerModuleId = modules[0] ? modules[0].id : null;
-      renderLearnerNav();
-      renderActiveLearnerModule();
-    }
-  });
 });
 
 document.getElementById('switchUser').addEventListener('click', ()=>{
@@ -1083,6 +1209,12 @@ async function loadProgressDashboard(){
     if(!l.progress || Object.keys(l.progress).length===0) return { cls:'notstarted', label:'Not started' };
     return { cls:'inprogress', label:'In progress' };
   }
+  function overallScoreFor(l){
+    const progress = l.progress || {};
+    let correct = 0, total = 0;
+    Object.values(progress).forEach(p=>{ if(p && typeof p.total==='number'){ correct += p.correct||0; total += p.total||0; } });
+    return total>0 ? Math.round((correct/total)*100)+'%' : '—';
+  }
 
   const total = learnerRows.length;
   const completed = learnerRows.filter(l=>l.completed_at).length;
@@ -1094,14 +1226,14 @@ async function loadProgressDashboard(){
     if(learnersForClient.length===0) return '';
     const rows = learnersForClient.map(l=>{
       const s = statusFor(l);
-      return `<tr><td>${l.name||'—'}</td><td>${l.email}</td><td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td></tr>`;
+      return `<tr><td>${escapeHtml(l.name)||'—'}</td><td>${escapeHtml(l.email)}</td><td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td><td>${overallScoreFor(l)}</td></tr>`;
     }).join('');
     return `<div class="client-group">
       <div class="client-group-head">
         <div class="clogo">${escapeHtml(c.initials)||'?'}</div><h3>${escapeHtml(c.name)}</h3><span class="ccount">${learnersForClient.length} user${learnersForClient.length===1?'':'s'}</span>
       </div>
       <table class="admin-table">
-        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+        <tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th></tr>
         ${rows}
       </table>
     </div>`;
@@ -1152,6 +1284,14 @@ function pathFirstSegment(){
 function routedAdmin(){
   return pathFirstSegment()==='banneradminview' || new URLSearchParams(location.search).get('admin')==='1';
 }
+function routedClientAdminSlug(){
+  const seg = pathFirstSegment();
+  if(seg && seg!=='banneradminview' && seg.endsWith('admin')){
+    const base = seg.slice(0, -'admin'.length);
+    if(base) return base;
+  }
+  return (new URLSearchParams(location.search).get('clientadmin')||'').toLowerCase() || null;
+}
 function routedSlug(){
   const seg = pathFirstSegment();
   if(seg && seg!=='banneradminview') return seg;
@@ -1175,10 +1315,19 @@ function brandSidebarFor(client){
 
 /* ---------- fetching/saving modules(tabs)+questions+flashcards from Supabase ---------- */
 function dbQuestionToLocal(row){
+  let slides;
+  if(row.slides && Array.isArray(row.slides) && row.slides.length){
+    slides = row.slides;
+  } else if(row.image){
+    // legacy single-image hotspot question — auto-migrate into a one-step array
+    slides = [{ image: row.image, regions: row.regions || [], focusArea: row.focus_area || null }];
+  } else {
+    slides = [{ image:'', regions:[], focusArea:null }];
+  }
   return {
     dbId: row.id, type: row.type, question: row.question || '',
     options: row.options || [], correctIndex: row.correct_index,
-    image: row.image || '', regions: row.regions || [], focusArea: row.focus_area || null,
+    slides,
     explanation: row.explanation || '', explanationImage: row.explanation_image || '', published: !!row.published
   };
 }
@@ -1190,9 +1339,8 @@ function localQuestionToDbRow(q, moduleId, clientId, sortOrder){
     module_id: moduleId, client_id: clientId, type: q.type, question: q.question || '',
     options: q.type==='mcq' ? q.options : null,
     correct_index: q.type==='mcq' ? q.correctIndex : null,
-    image: q.type==='hotspot' ? (q.image||'') : null,
-    regions: q.type==='hotspot' ? (q.regions||[]) : null,
-    focus_area: q.type==='hotspot' ? (q.focusArea||null) : null,
+    image: null, regions: null, focus_area: null,
+    slides: q.type==='hotspot' ? (q.slides||[]) : null,
     explanation: q.explanation || '', explanation_image: q.explanationImage || '', published: !!q.published, sort_order: sortOrder
   };
 }
@@ -1367,6 +1515,102 @@ document.getElementById('adminGateForm').addEventListener('submit', async e=>{
   }
 });
 
+document.getElementById('clientAdminGateForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const errEl = document.getElementById('clientAdminGateError');
+  const submitBtn = document.getElementById('clientAdminGateSubmitBtn');
+  errEl.style.display='none';
+  const email = document.getElementById('caEmail').value.trim();
+  const password = document.getElementById('caPassword').value;
+
+  submitBtn.disabled = true;
+  try{
+    const { error: authError } = await sb.auth.signInWithPassword({ email, password });
+    if(authError){
+      errEl.textContent = 'Sign-in failed: ' + authError.message;
+      errEl.style.display='block';
+      return;
+    }
+    const { data: caRow, error: caError } = await sb.from('client_admins').select('email').eq('email', email.toLowerCase()).eq('client_id', currentClientAdminClient.dbId).maybeSingle();
+    if(caError || !caRow){
+      await sb.auth.signOut();
+      errEl.textContent = "That account doesn't have admin access for this client.";
+      errEl.style.display='block';
+      return;
+    }
+    document.getElementById('clientAdminGateScreen').style.display='none';
+    document.getElementById('clientAdminView').classList.add('active');
+    document.getElementById('caClientName').textContent = currentClientAdminClient.name;
+    loadClientAdminDashboard(currentClientAdminClient);
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+document.getElementById('clientAdminLogoutBtn').addEventListener('click', async ()=>{
+  document.getElementById('clientAdminView').classList.remove('active');
+  await sb.auth.signOut();
+  document.getElementById('caEmail').value='';
+  document.getElementById('caPassword').value='';
+  document.getElementById('clientAdminGateError').style.display='none';
+  document.getElementById('clientAdminGateScreen').style.display='flex';
+});
+
+async function loadClientAdminDashboard(client){
+  const container = document.getElementById('clientAdminDashboard');
+  container.innerHTML = `
+    <div class="admin-cards">
+      ${[1,2,3,4].map(()=>`<div class="admin-card">
+        <span class="skel-block" style="width:60%;height:11px;margin-bottom:10px"></span>
+        <span class="skel-block" style="width:40%;height:24px"></span>
+      </div>`).join('')}
+    </div>
+    <span class="skel-block" style="width:100%;height:160px;margin-top:20px;border-radius:12px"></span>`;
+
+  const { data: learnerRows, error } = await sb.from('learners').select('*').eq('client_id', client.dbId);
+  if(error){
+    console.error('Client admin dashboard load failed:', error);
+    container.innerHTML = `<p style="color:var(--coral-deep)">Couldn't load participation data — check the browser console for details.</p>`;
+    return;
+  }
+
+  function statusFor(l){
+    if(l.completed_at) return { cls:'completed', label:'Completed' };
+    if(!l.progress || Object.keys(l.progress).length===0) return { cls:'notstarted', label:'Not started' };
+    return { cls:'inprogress', label:'In progress' };
+  }
+  function overallScoreFor(l){
+    const progress = l.progress || {};
+    let correct = 0, total = 0;
+    Object.values(progress).forEach(p=>{ if(p && typeof p.total==='number'){ correct += p.correct||0; total += p.total||0; } });
+    return total>0 ? Math.round((correct/total)*100)+'%' : '—';
+  }
+
+  const total = learnerRows.length;
+  const completed = learnerRows.filter(l=>l.completed_at).length;
+  const notStarted = learnerRows.filter(l=>!l.completed_at && (!l.progress || Object.keys(l.progress).length===0)).length;
+  const inProgress = total - completed - notStarted;
+
+  const rows = learnerRows.map(l=>{
+    const s = statusFor(l);
+    return `<tr><td>${escapeHtml(l.name)||'—'}</td><td>${escapeHtml(l.email)}</td><td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td><td>${overallScoreFor(l)}</td></tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="admin-cards">
+      <div class="admin-card"><div class="mlabel">Total participants</div><div class="mval">${total}</div></div>
+      <div class="admin-card"><div class="mlabel">Completed</div><div class="mval">${completed}</div></div>
+      <div class="admin-card"><div class="mlabel">In progress</div><div class="mval">${inProgress}</div></div>
+      <div class="admin-card"><div class="mlabel">Not started</div><div class="mval">${notStarted}</div></div>
+    </div>
+    ${total===0 ? '<p style="color:var(--ink-faint);font-style:italic;margin-top:20px">No one has signed up yet.</p>' : `
+    <table class="admin-table" style="margin-top:20px">
+      <tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th></tr>
+      ${rows}
+    </table>`}
+  `;
+}
+
 async function bootstrapRoute(){
   if(routedAdmin()){
     const { data: { session } } = await sb.auth.getSession();
@@ -1381,6 +1625,34 @@ async function bootstrapRoute(){
     }
     document.getElementById('signinScreen').style.display='none';
     document.getElementById('adminGateScreen').style.display='flex';
+    return;
+  }
+
+  const clientAdminSlug = routedClientAdminSlug();
+  if(clientAdminSlug){
+    const caClient = clients.find(c=>!c.archived && c.slug===clientAdminSlug);
+    if(!caClient){
+      document.getElementById('signinScreen').style.display='none';
+      document.getElementById('invalidLinkScreen').style.display='flex';
+      return;
+    }
+    currentClientAdminClient = caClient;
+    document.getElementById('caGateClientName').textContent = caClient.name;
+    document.getElementById('caGateClientLogo').textContent = caClient.initials;
+
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      const { data: caRow } = await sb.from('client_admins').select('email').eq('email', session.user.email.toLowerCase()).eq('client_id', caClient.dbId).maybeSingle();
+      if(caRow){
+        document.getElementById('signinScreen').style.display='none';
+        document.getElementById('clientAdminView').classList.add('active');
+        document.getElementById('caClientName').textContent = caClient.name;
+        loadClientAdminDashboard(caClient);
+        return;
+      }
+    }
+    document.getElementById('signinScreen').style.display='none';
+    document.getElementById('clientAdminGateScreen').style.display='flex';
     return;
   }
 
@@ -1436,7 +1708,8 @@ function clientCardTemplate(c, idx){
       <button type="button" class="danger" data-role="deletebtn">Delete permanently</button>
     </div>
     <div class="chead"><div class="clogo">${logo}</div><h4>${escapeHtml(c.name)}</h4></div>
-    <div class="curl">yourdomain.com/${c.slug}</div>
+    <div class="curl">Learner link: yourdomain.com/${c.slug}</div>
+    <div class="curl">Client-admin link: yourdomain.com/${c.slug}admin</div>
     <div class="cactions"><button type="button" data-role="managequizzes">Manage quizzes</button><button type="button" data-role="editbtn">Edit</button></div>
   </div>`;
 }
@@ -1682,16 +1955,20 @@ function mcqBody(q, id){
     <button type="button" class="btn-add-opt" data-role="addopt">+ Add choice</button>`;
 }
 
-/* ---------- image hotspot body ---------- */
-function hotspotBody(q){
-  if(!q.image){
-    return `<div class="hs-block" data-role="hsblock">
-      <div class="upload-box" data-role="hsUploadBox"><div class="uicon">🖼️</div><div class="utext">Click to upload the screenshot learners will click on</div></div>
-      <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
-    </div>`;
+/* ---------- image hotspot body (multi-slide / multi-step) ---------- */
+function hotspotSlideNavInner(slides, activeIdx){
+  return slides.map((s,i)=>`
+    <button type="button" class="hs-slide-chip${i===activeIdx?' active':''}" data-role="hsSlideSel" data-idx="${i}">
+      Step ${i+1}${!s.image?' (empty)':''}${slides.length>1?` <span class="hs-slide-del" data-role="hsSlideDel" data-idx="${i}" title="Remove this step">✕</span>`:''}
+    </button>`).join('') +
+    `<button type="button" class="hs-slide-add" data-role="hsSlideAdd">+ Add step</button>`;
+}
+function hotspotCanvasTemplate(slide){
+  if(!slide || !slide.image){
+    return `<div class="upload-box" data-role="hsUploadBox"><div class="uicon">🖼️</div><div class="utext">Click to upload this step's screenshot</div></div>
+      <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">`;
   }
-  return `<div class="hs-block" data-role="hsblock">
-    <div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(q.image)}"></div>
+  return `<div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(slide.image)}"></div>
     <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
     <div class="hs-tools" data-role="hsTools">
       <button class="hs-tool-btn" data-tool="select" type="button">🖱️ Select <span class="k">(S)</span></button>
@@ -1702,8 +1979,39 @@ function hotspotBody(q){
     <p class="hs-empty-note" data-role="hsEmpty">No regions yet — pick "Draw region," then drag on the image above.</p>
     <button class="hs-clear-btn" type="button" data-role="hsClear">Clear all regions</button>
     <div data-role="hsFocusRemoveWrap"></div>
-    <button class="hs-clear-btn" type="button" data-role="hsReplaceImg">Replace image</button>
+    <button class="hs-clear-btn" type="button" data-role="hsReplaceImg">Replace image</button>`;
+}
+function hotspotBody(q){
+  const slides = (q.slides && q.slides.length) ? q.slides : [{image:'', regions:[], focusArea:null}];
+  return `<div class="hs-block" data-role="hsblock">
+    <p style="color:var(--ink-soft);font-size:12.5px;margin-bottom:8px">Each step is its own screenshot — add one per click a learner needs to make to complete this task.</p>
+    <div class="hs-slide-nav" data-role="hsSlideNav">${hotspotSlideNavInner(slides, 0)}</div>
+    <div data-role="hsCanvasArea">${hotspotCanvasTemplate(slides[0])}</div>
   </div>`;
+}
+
+function hsSyncActiveSlideFromState(cardEl){
+  if(!cardEl.hsSlides || cardEl.hsActiveSlideIndex==null) return;
+  const state = cardEl.hsState;
+  if(!state) return;
+  const cur = cardEl.hsSlides[cardEl.hsActiveSlideIndex] || {};
+  cardEl.hsSlides[cardEl.hsActiveSlideIndex] = {
+    image: cur.image || '',
+    regions: (state.regions||[]).map(r=>({...r})),
+    focusArea: state.focusArea ? {...state.focusArea} : null
+  };
+}
+function renderSlideNavFor(cardEl){
+  const nav = cardEl.querySelector('[data-role="hsSlideNav"]');
+  if(nav) nav.innerHTML = hotspotSlideNavInner(cardEl.hsSlides, cardEl.hsActiveSlideIndex);
+}
+function switchToSlide(cardEl, idx){
+  cardEl.hsActiveSlideIndex = idx;
+  const canvasArea = cardEl.querySelector('[data-role="hsCanvasArea"]');
+  canvasArea.innerHTML = hotspotCanvasTemplate(cardEl.hsSlides[idx]);
+  if(cardEl.hsSlides[idx].image) hsInitCard(cardEl, cardEl.hsSlides[idx]);
+  else cardEl.hsState = null;
+  renderSlideNavFor(cardEl);
 }
 
 function renderQcardBody(q, id){
@@ -1968,7 +2276,14 @@ function mountQcard(q){
   temp.innerHTML = html;
   const cardEl = temp.firstElementChild;
   document.getElementById('qcardList').appendChild(cardEl);
-  if((q.type==='hotspot') && q.image) hsInitCard(cardEl, q);
+  if(q.type==='hotspot'){
+    const slides = (q.slides && q.slides.length)
+      ? q.slides.map(s=>({ image: s.image||'', regions: (s.regions||[]).map(r=>({...r})), focusArea: s.focusArea?{...s.focusArea}:null }))
+      : [{ image:'', regions:[], focusArea:null }];
+    cardEl.hsSlides = slides;
+    cardEl.hsActiveSlideIndex = 0;
+    if(slides[0].image) hsInitCard(cardEl, slides[0]);
+  }
   return cardEl;
 }
 
@@ -2147,9 +2462,35 @@ document.getElementById('qcardList').addEventListener('click', (e)=>{
     card.dataset.type = newType;
     card.querySelectorAll('[data-role="settype"]').forEach(b=>b.classList.toggle('active', b.dataset.type===newType));
     const bodyEl = card.querySelector('[data-role="qcardbody"]');
-    bodyEl.innerHTML = renderQcardBody(newType==='hotspot' ? {type:'hotspot', image:''} : {type:'mcq', options:['','']}, card.dataset.id);
+    bodyEl.innerHTML = renderQcardBody(newType==='hotspot' ? {type:'hotspot', slides:[{image:'',regions:[],focusArea:null}]} : {type:'mcq', options:['','']}, card.dataset.id);
     delete card.hsState;
+    if(newType==='hotspot'){ card.hsSlides = [{image:'', regions:[], focusArea:null}]; card.hsActiveSlideIndex = 0; }
+    else { delete card.hsSlides; delete card.hsActiveSlideIndex; }
     if(hsActiveCard===card) hsActiveCard = null;
+    return;
+  }
+  if(e.target.closest('[data-role="hsSlideAdd"]')){
+    const card = e.target.closest('.qcard');
+    hsSyncActiveSlideFromState(card);
+    card.hsSlides.push({image:'', regions:[], focusArea:null});
+    switchToSlide(card, card.hsSlides.length-1);
+    return;
+  }
+  if(e.target.closest('[data-role="hsSlideDel"]')){
+    const card = e.target.closest('.qcard');
+    const idx = +e.target.closest('[data-role="hsSlideDel"]').dataset.idx;
+    if(card.hsSlides.length<=1) return;
+    card.hsSlides.splice(idx,1);
+    const newActive = Math.min(card.hsActiveSlideIndex, card.hsSlides.length-1);
+    switchToSlide(card, newActive);
+    return;
+  }
+  if(e.target.closest('[data-role="hsSlideSel"]')){
+    const card = e.target.closest('.qcard');
+    const idx = +e.target.closest('[data-role="hsSlideSel"]').dataset.idx;
+    if(idx===card.hsActiveSlideIndex) return;
+    hsSyncActiveSlideFromState(card);
+    switchToSlide(card, idx);
     return;
   }
   if(e.target.closest('[data-role="hsUploadBox"]') || e.target.closest('[data-role="hsReplaceImg"]')){
@@ -2216,9 +2557,12 @@ document.getElementById('qcardList').addEventListener('change', (e)=>{
     const card = e.target.closest('.qcard');
     const reader = new FileReader();
     reader.onload = (ev)=>{
-      const bodyEl = card.querySelector('[data-role="qcardbody"]');
-      bodyEl.innerHTML = renderQcardBody({type:'hotspot', image:ev.target.result}, card.dataset.id);
-      hsInitCard(card);
+      const idx = card.hsActiveSlideIndex ?? 0;
+      card.hsSlides[idx] = { image: ev.target.result, regions: [], focusArea: null };
+      const canvasArea = card.querySelector('[data-role="hsCanvasArea"]');
+      canvasArea.innerHTML = hotspotCanvasTemplate(card.hsSlides[idx]);
+      hsInitCard(card, card.hsSlides[idx]);
+      renderSlideNavFor(card);
     };
     reader.readAsDataURL(file);
     return;
@@ -2248,14 +2592,13 @@ function collectQcardData(card){
   const explanationImage = shotImgEl ? shotImgEl.getAttribute('src') : '';
 
   if(type==='hotspot'){
-    const state = card.hsState || {regions:[], focusArea:null};
-    const imgEl = card.querySelector('[data-role="hsWrap"] img');
-    return {
-      type:'hotspot', question, explanation, published, explanationImage,
-      image: imgEl ? imgEl.getAttribute('src') : '',
-      regions: (state.regions||[]).map(r=>({x:r.x,y:r.y,w:r.w,h:r.h,correct:!!r.correct})),
-      focusArea: state.focusArea ? {x:state.focusArea.x,y:state.focusArea.y,w:state.focusArea.w,h:state.focusArea.h} : null
-    };
+    hsSyncActiveSlideFromState(card);
+    const slides = (card.hsSlides && card.hsSlides.length ? card.hsSlides : [{image:'',regions:[],focusArea:null}]).map(s=>({
+      image: s.image || '',
+      regions: (s.regions||[]).map(r=>({x:r.x,y:r.y,w:r.w,h:r.h,correct:!!r.correct})),
+      focusArea: s.focusArea ? {x:s.focusArea.x,y:s.focusArea.y,w:s.focusArea.w,h:s.focusArea.h} : null
+    }));
+    return { type:'hotspot', question, explanation, published, explanationImage, slides };
   }
 
   const opts = Array.from(card.querySelectorAll('.qcard-opt')).map(row=>({
