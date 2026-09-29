@@ -90,7 +90,8 @@ h1,h2,h3,h4{font-family:var(--display);color:var(--ink);letter-spacing:-.01em}
 .sb-foot{padding:14px 22px 20px;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:8px}
 .sb-footbtn{display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);color:var(--ink-soft);font-size:13px;font-weight:500;padding:9px 12px;border-radius:var(--radius-sm);text-align:left}
 .sb-footbtn:hover{border-color:var(--coral);color:var(--coral-deep)}
-.sb-footbtn.danger:hover{border-color:#C33F2E;color:#C33F2E}
+.sb-footbtn.danger{border-color:#F0C4BE;color:#C33F2E;background:#FDF3F1}
+.sb-footbtn.danger:hover{border-color:#C33F2E;color:#fff;background:#C33F2E}
 
 /* ---------- main content ---------- */
 main{min-width:0}
@@ -151,12 +152,19 @@ main{min-width:0}
 .client-group-head h3{font-size:16px}
 .client-group-head .ccount{font-size:13px;color:var(--ink-faint)}
 .admin-table{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);border-collapse:collapse;overflow:hidden}
+.admin-table td.actions-cell{position:relative;text-align:right;width:44px}
+.row-more-btn{background:none;border:0;color:var(--ink-faint);font-size:16px;padding:4px 9px;border-radius:6px;line-height:1}
+.row-more-btn:hover{background:var(--bg);color:var(--ink)}
+.row-menu{display:none;position:absolute;right:10px;top:38px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:20;min-width:160px;overflow:hidden}
+.row-menu.show{display:block}
+.row-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 14px;font-size:13.5px;color:var(--coral-deep)}
+.row-menu button:hover{background:var(--coral-soft)}
 .admin-table th{text-align:left;font-size:12px;font-weight:600;color:var(--ink-faint);padding:10px 18px;background:var(--bg);border-bottom:1px solid var(--line)}
 .admin-table td{padding:13px 18px;border-bottom:1px solid var(--line-soft);font-size:14.5px}
 .admin-table tr:last-child td{border-bottom:0}
 .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:4px 11px;border-radius:99px}
 .status-pill.notstarted{background:#EEF1F4;color:var(--ink-faint)}
-.status-pill.inprogress{background:var(--coral-soft);color:var(--coral-deep)}
+.status-pill.inprogress{background:#FCEFD8;color:#8A5A10}
 .status-pill.completed{background:var(--success-soft);color:#1F5C3D}
 .status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
 
@@ -332,17 +340,19 @@ main{min-width:0}
 
 /* ---------- client-admin dashboard layout ---------- */
 .ca-shell{display:grid;grid-template-columns:272px 1fr;min-height:100vh}
-.ca-sidebar{background:var(--surface);border-right:1px solid var(--line);padding:28px 22px;display:flex;flex-direction:column;gap:22px;min-height:100vh}
-.ca-sb-profile{padding-top:4px;border-top:1px solid var(--line-soft)}
-.ca-sb-profile .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);margin-bottom:4px}
-.ca-sb-profile .uemail{font-size:13px;color:var(--ink-soft);word-break:break-all}
-.ca-sidebar-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.ca-sidebar{background:var(--surface);border-right:1px solid var(--line);padding:26px 22px;display:flex;flex-direction:column;min-height:100vh}
+.ca-sb-top .sb-brand{margin-bottom:12px}
+.ca-sb-tag{font-size:11.5px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;padding-left:1px}
+.ca-sb-divider{height:1px;background:var(--line-soft);margin:20px 0}
+.ca-sb-profile .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);margin-bottom:5px}
+.ca-sb-profile .uemail{font-size:13px;color:var(--ink-soft);word-break:break-all;line-height:1.4}
+.ca-sidebar-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:24px}
 .ca-main{padding:40px 44px}
 .ca-main h1{font-size:24px;margin-bottom:22px}
 @media (max-width:880px){
   .ca-shell{grid-template-columns:1fr}
-  .ca-sidebar{min-height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:14px}
-  .ca-sidebar-actions{margin-top:0;flex-direction:row;margin-left:auto}
+  .ca-sidebar{min-height:auto}
+  .ca-sidebar-actions{margin-top:20px;flex-direction:row;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--line-soft)}
   .ca-main{padding:24px 20px}
 }
 
@@ -569,20 +579,24 @@ main{min-width:0}
 <div class="admin" id="clientAdminView">
   <div class="ca-shell">
     <aside class="ca-sidebar">
-      <div class="sb-brand">
-        <div class="client-logo" id="caSbClientLogo">AH</div>
-        <span class="cname" id="caSbClientName">April Housing</span>
+      <div class="ca-sb-top">
+        <div class="sb-brand">
+          <div class="client-logo" id="caSbClientLogo">AH</div>
+          <span class="cname" id="caSbClientName">April Housing</span>
+        </div>
+        <div class="ca-sb-tag">Admin dashboard</div>
       </div>
-      <div class="sb-title">
-        <div class="label">Admin dashboard</div>
-        <h2>Training participation</h2>
-      </div>
+
+      <div class="ca-sb-divider"></div>
+
       <div class="ca-sb-profile">
         <div class="label">Signed in as</div>
         <div class="uemail" id="caSbEmail">—</div>
       </div>
+
       <div class="ca-sidebar-actions">
         <button type="button" class="sb-footbtn" id="clientAdminRefreshBtn">↻ Refresh</button>
+        <button type="button" class="sb-footbtn" id="clientAdminActivityLogBtn">📋 Activity log</button>
         <button type="button" class="sb-footbtn danger" id="clientAdminLogoutBtn">← Log out</button>
       </div>
     </aside>
@@ -646,6 +660,7 @@ main{min-width:0}
 <div class="admin" id="adminView">
   <div class="admin-top">
     <button class="admin-back-btn" id="adminBackToLogin">← Log out</button>
+    <button class="admin-back-btn" id="bannerActivityLogBtn" style="right:130px">📋 Activity log</button>
     <h1>Banner University — Admin</h1>
     <p>Manage clients, quizzes, and view onboarding progress</p>
     <div class="admin-tabs">
@@ -752,6 +767,15 @@ main{min-width:0}
     <h2 id="celebrationTitle">Nice work!</h2>
     <p class="sub" id="celebrationScoreText">You scored 92% on this section.</p>
     <button type="button" class="btn-primary" id="celebrationContinueBtn" style="margin-top:6px">Continue</button>
+  </div>
+</div>
+
+<div class="gloss-overlay" id="activityLogOverlay">
+  <div class="gloss-modal" style="max-width:640px;text-align:left">
+    <button class="gloss-close" id="activityLogCloseBtn" type="button">✕</button>
+    <h2>📋 Activity log</h2>
+    <p class="sub">Admin actions on learner progress, most recent first.</p>
+    <div id="activityLogList"><p style="color:var(--ink-faint);font-style:italic">Loading…</p></div>
   </div>
 </div>
 
@@ -1259,16 +1283,13 @@ async function loadProgressDashboard(){
   const groupsHtml = (clientRows||[]).map(c=>{
     const learnersForClient = learnerRows.filter(l=>l.client_id===c.id);
     if(learnersForClient.length===0) return '';
-    const rows = learnersForClient.map(l=>{
-      const s = statusFor(l);
-      return `<tr><td>${escapeHtml(l.name)||'—'}</td><td>${escapeHtml(l.email)}</td><td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td><td>${overallScoreFor(l)}</td></tr>`;
-    }).join('');
+    const rows = learnersForClient.map(l=>learnerRowTemplate(l, statusFor, overallScoreFor)).join('');
     return `<div class="client-group">
       <div class="client-group-head">
         <div class="clogo">${escapeHtml(c.initials)||'?'}</div><h3>${escapeHtml(c.name)}</h3><span class="ccount">${learnersForClient.length} user${learnersForClient.length===1?'':'s'}</span>
       </div>
       <table class="admin-table">
-        <tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th></tr>
+        <tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th><th></th></tr>
         ${rows}
       </table>
     </div>`;
@@ -1305,6 +1326,98 @@ function escapeHtml(str){
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
 }
+
+function learnerRowTemplate(l, statusFor, overallScoreFor){
+  const s = statusFor(l);
+  return `<tr>
+    <td>${escapeHtml(l.name)||'—'}</td>
+    <td>${escapeHtml(l.email)}</td>
+    <td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td>
+    <td>${overallScoreFor(l)}</td>
+    <td class="actions-cell">
+      <button type="button" class="row-more-btn" data-role="rowmore">⋮</button>
+      <div class="row-menu" data-role="rowmenu">
+        <button type="button" data-role="resetprogress" data-learner-id="${l.id}" data-learner-name="${escapeHtml(l.name||l.email)}">Reset progress</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function handleDashboardRowMenuClick(e){
+  if(e.target.closest('[data-role="rowmore"]')){
+    const btn = e.target.closest('[data-role="rowmore"]');
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll('.row-menu.show').forEach(m=>{ if(m!==menu) m.classList.remove('show'); });
+    menu.classList.toggle('show');
+    return;
+  }
+  if(e.target.closest('[data-role="resetprogress"]')){
+    const btn = e.target.closest('[data-role="resetprogress"]');
+    const learnerId = btn.dataset.learnerId;
+    const learnerName = btn.dataset.learnerName;
+    document.querySelectorAll('.row-menu.show').forEach(m=>m.classList.remove('show'));
+    openModal({
+      title:`Reset ${learnerName}'s progress?`,
+      body:`They'll need to redo every section from scratch, and their current score will be cleared. This can't be undone.`,
+      danger:true, confirmText:'Reset progress',
+      onConfirm: async ()=>{
+        const { error } = await sb.rpc('admin_reset_learner_progress', { p_learner_id: learnerId });
+        if(error){
+          console.error('Reset failed:', error);
+          openModal({ title:'Reset failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
+          return;
+        }
+        if(document.getElementById('adminView').classList.contains('active')) loadProgressDashboard();
+        if(document.getElementById('clientAdminView').classList.contains('active')) loadClientAdminDashboard(currentClientAdminClient);
+      }
+    });
+  }
+}
+document.getElementById('progressDashboard').addEventListener('click', handleDashboardRowMenuClick);
+document.getElementById('clientAdminDashboard').addEventListener('click', handleDashboardRowMenuClick);
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('[data-role="rowmore"]') && !e.target.closest('[data-role="rowmenu"]')){
+    document.querySelectorAll('.row-menu.show').forEach(m=>m.classList.remove('show'));
+  }
+});
+
+async function loadActivityLog(){
+  const el = document.getElementById('activityLogList');
+  el.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">Loading…</p>`;
+  const { data, error } = await sb.from('admin_action_log').select('*').order('created_at', { ascending:false }).limit(100);
+  if(error){
+    console.error('Activity log load failed:', error);
+    el.innerHTML = `<p style="color:var(--coral-deep)">Couldn't load the log — check the browser console for details.</p>`;
+    return;
+  }
+  if(!data || data.length===0){
+    el.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">No admin actions recorded yet.</p>`;
+    return;
+  }
+  el.innerHTML = `<table class="admin-table">
+    <tr><th>When</th><th>Admin</th><th>Action</th><th>Learner</th></tr>
+    ${data.map(row=>`<tr>
+      <td>${new Date(row.created_at).toLocaleString()}</td>
+      <td>${escapeHtml(row.actor_email)}</td>
+      <td>${row.action==='reset_progress' ? 'Reset progress' : escapeHtml(row.action)}</td>
+      <td>${escapeHtml(row.target_learner_email)||'—'}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+document.getElementById('bannerActivityLogBtn').addEventListener('click', ()=>{
+  loadActivityLog();
+  document.getElementById('activityLogOverlay').classList.add('show');
+});
+document.getElementById('clientAdminActivityLogBtn').addEventListener('click', ()=>{
+  loadActivityLog();
+  document.getElementById('activityLogOverlay').classList.add('show');
+});
+document.getElementById('activityLogCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('activityLogOverlay').classList.remove('show');
+});
+document.getElementById('activityLogOverlay').addEventListener('click', (e)=>{
+  if(e.target.id==='activityLogOverlay') document.getElementById('activityLogOverlay').classList.remove('show');
+});
 
 /* ---------- multi-tenant routing (client-specific links + admin gate) ---------- */
 let currentClient = null;
@@ -1633,10 +1746,7 @@ async function loadClientAdminDashboard(client){
   const notStarted = learnerRows.filter(l=>!l.completed_at && (!l.progress || Object.keys(l.progress).length===0)).length;
   const inProgress = total - completed - notStarted;
 
-  const rows = learnerRows.map(l=>{
-    const s = statusFor(l);
-    return `<tr><td>${escapeHtml(l.name)||'—'}</td><td>${escapeHtml(l.email)}</td><td><span class="status-pill ${s.cls}"><span class="dot"></span>${s.label}</span></td><td>${overallScoreFor(l)}</td></tr>`;
-  }).join('');
+  const rows = learnerRows.map(l=>learnerRowTemplate(l, statusFor, overallScoreFor)).join('');
 
   container.innerHTML = `
     <div class="admin-cards">
@@ -1647,7 +1757,7 @@ async function loadClientAdminDashboard(client){
     </div>
     ${total===0 ? '<p style="color:var(--ink-faint);font-style:italic;margin-top:20px">No one has signed up yet.</p>' : `
     <table class="admin-table" style="margin-top:20px">
-      <tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th></tr>
+      <tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th><th></th></tr>
       ${rows}
     </table>`}
   `;
