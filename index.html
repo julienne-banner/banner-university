@@ -106,9 +106,13 @@ main{min-width:0}
 .divider{border:0;border-top:1px solid var(--line);margin:32px 0}
 
 /* quiz block */
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:22px 0;box-shadow:var(--shadow);border-left:1px solid var(--line);transition:border-color .3s ease,background .3s ease}
-.quiz.hs-complete{border-left:4px solid var(--success);background:linear-gradient(to right, var(--success-soft) 0%, var(--surface) 90px)}
-.hs-complete-badge{display:inline-flex;align-items:center;gap:6px;background:var(--success-soft);color:#1F5C3D;font-size:13px;font-weight:700;padding:6px 13px;border-radius:99px;margin-bottom:12px;animation:hscompletepop .4s ease}
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:22px 0;box-shadow:var(--shadow);transition:border-color .25s ease,background .25s ease}
+.quiz.q-correct{border:2px solid var(--success);background:var(--success-soft)}
+.quiz.q-wrong{border:2px solid var(--coral);background:var(--coral-soft)}
+.hs-complete-badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:6px 13px;border-radius:99px;margin-bottom:12px;animation:hscompletepop .4s ease}
+.hs-complete-badge.badge-correct{background:#fff;color:#1F5C3D}
+.hs-complete-badge.badge-wrong{background:#fff;color:var(--coral-deep)}
+.hs-complete-badge.badge-neutral{background:#fff;color:var(--ink-soft)}
 @keyframes hscompletepop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
 .quiz .qtext{font-size:18px;font-weight:600;margin-bottom:18px;line-height:1.4}
 .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:9px;font-size:15px;font-weight:500;color:var(--ink);transition:all .12s}
@@ -122,7 +126,7 @@ main{min-width:0}
 .explain{display:none;margin-top:16px;padding-top:18px;border-top:1px dashed var(--line)}
 .explain.show{display:block;animation:fadein .25s ease}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.explain .tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--success);background:var(--success-soft);padding:3px 9px;border-radius:99px;margin-bottom:10px}
+.explain .tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--success);background:#fff;padding:3px 9px;border-radius:99px;margin-bottom:10px}
 .explain p{margin:8px 0;color:var(--ink);font-size:15px}
 .explain-shot{margin:14px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
 .explain-shot .frame{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px;background:
@@ -1222,10 +1226,13 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       return `<button type="button" class="hs-step-chip ${ok?'ok':'bad'}" data-role="hsReviewStep" data-idx="${i}">${i+1} ${ok?'✓':'✕'}</button>`;
     }).join('');
 
-    block.classList.add('hs-complete');
+    const ratio = scored.length ? correctCount/scored.length : 0.5;
+    applyQuizResultTint(block, ratio);
+    const badgeClass = ratio>0.5 ? 'badge-correct' : (ratio<0.5 ? 'badge-wrong' : 'badge-neutral');
+    const badgeText = ratio>0.5 ? '✓ Mostly correct' : (ratio<0.5 ? 'Worth a second look' : 'Mixed results');
     block.innerHTML = `
       <div class="qtext">${escapeHtml(q.question)}</div>
-      <div class="hs-complete-badge">✓ Section complete</div>
+      <div class="hs-complete-badge ${badgeClass}">${badgeText}</div>
       ${scored.length ? `<div class="hs-summary-score">${correctCount} of ${scored.length} steps correct</div>` : ''}
       ${chips ? `<div class="hs-step-chips">${chips}</div>` : ''}
       <div id="hsReviewSlot"></div>
@@ -1387,6 +1394,7 @@ function renderActiveLearnerModule(){
               block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`).classList.add('correct');
             }
             block.querySelector(`#learnerExplain${qi}`).classList.add('show');
+            applyQuizResultTint(block, correct ? 1 : 0);
             if(correct) currentModuleScore.correct++;
             answered.add(qi);
             checkAllAnswered();
@@ -1652,6 +1660,13 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 // Without this, a plain " (or <, >, &) typed into a question, answer,
 // term, or tab name can break the surrounding markup — which is exactly
 // what silently truncated your answer text and swallowed content after it.
+// ratio = fraction correct (0..1). >0.5 → green/correct, <0.5 → red/wrong, exactly 0.5 → neutral (no strong claim either way).
+function applyQuizResultTint(block, ratio){
+  block.classList.remove('q-correct','q-wrong');
+  if(ratio > 0.5) block.classList.add('q-correct');
+  else if(ratio < 0.5) block.classList.add('q-wrong');
+}
+
 function escapeHtml(str){
   return String(str==null ? '' : str)
     .replace(/&/g,'&amp;')
