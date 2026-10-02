@@ -335,13 +335,19 @@ main{min-width:0}
 .hs-step-chip.bad{border-color:var(--coral);color:var(--coral-deep)}
 .hs-step-chip.active{box-shadow:0 0 0 2px var(--teal) inset}
 
-/* ---------- zoom / full view (shared by learner slides + admin canvas) ---------- */
-.hs-zoom-viewport{position:relative;overflow:auto;border-radius:10px;max-height:460px}
-.hs-zoom-viewport.hs-zoom-full{max-height:82vh}
-.hs-zoom-viewport .hs-imgwrap,.hs-zoom-viewport .hs-admin-wrap{transform-origin:0 0}
-.hs-zoom-controls{position:sticky;top:8px;left:100%;width:fit-content;z-index:20;display:flex;gap:4px;margin-bottom:-36px;margin-right:8px}
-.hs-zoom-btn{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:6px;width:28px;height:28px;font-size:14px;color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);flex-shrink:0}
+/* ---------- zoom / full view (shared by learner slides + admin canvas + explanation shots) ---------- */
+.hs-zoom-viewport{position:relative}
+.hs-zoom-inner{overflow:auto;border-radius:10px;max-height:460px}
+.hs-zoom-viewport .hs-imgwrap,.hs-zoom-viewport .hs-admin-wrap,.hs-zoom-viewport .explain-shot{transform-origin:0 0}
+.hs-zoom-controls{display:flex;justify-content:flex-end;gap:4px;margin-bottom:6px}
+.hs-zoom-btn{background:var(--surface);border:1px solid var(--line);border-radius:6px;width:28px;height:28px;font-size:14px;color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .hs-zoom-btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* full view — the viewport itself becomes a fixed overlay, DOM position never changes */
+.hs-zoom-viewport.hs-zoom-full{position:fixed;top:5vh;left:5vw;right:5vw;bottom:5vh;z-index:300;background:var(--surface);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:14px;display:flex;flex-direction:column}
+.hs-zoom-viewport.hs-zoom-full .hs-zoom-inner{max-height:none;flex:1}
+.hs-zoom-backdrop{display:none;position:fixed;inset:0;background:rgba(27,36,48,.6);z-index:290}
+.hs-zoom-backdrop.show{display:block}
 
 /* ---------- scored-assessment warning screen ---------- */
 .score-pill{display:inline-block;font-size:12.5px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:4px 11px;border-radius:99px;margin-bottom:14px}
@@ -823,6 +829,8 @@ main{min-width:0}
   </div>
 </div>
 
+<div class="hs-zoom-backdrop" id="hsZoomBackdrop"></div>
+
 <div class="row-menu-floating" id="floatingRowMenu">
   <button type="button" data-role="resetprogress">Reset progress</button>
   <button type="button" data-role="archivelearner">Archive user</button>
@@ -1033,20 +1041,36 @@ function goToNextModule(){
   renderActiveLearnerModule();
 }
 
-const hsZoomControlsHtml = `<div class="hs-zoom-controls">
+const HS_ZOOM_OPEN = `<div class="hs-zoom-viewport"><div class="hs-zoom-controls">
   <button type="button" class="hs-zoom-btn" data-role="hsZoomOut" title="Zoom out">−</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomReset" title="Reset zoom">⟲</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomIn" title="Zoom in">+</button>
-  <button type="button" class="hs-zoom-btn" data-role="hsZoomFull" title="Toggle full view">⛶</button>
-</div>`;
+  <button type="button" class="hs-zoom-btn" data-role="hsZoomFull" title="Full view">⛶</button>
+</div><div class="hs-zoom-inner">`;
+const HS_ZOOM_CLOSE = `</div></div>`;
+
+document.getElementById('hsZoomBackdrop').addEventListener('click', hsExitFullview);
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape') hsExitFullview();
+});
+
+function hsExitFullview(){
+  const full = document.querySelector('.hs-zoom-viewport.hs-zoom-full');
+  if(full){
+    full.classList.remove('hs-zoom-full');
+    if(full._hsResetZoom) full._hsResetZoom();
+  }
+  document.getElementById('hsZoomBackdrop').classList.remove('show');
+}
 
 function wireHsZoom(viewport){
   if(!viewport || viewport._hsZoomWired) return;
   viewport._hsZoomWired = true;
-  const target = viewport.querySelector('.hs-imgwrap, .hs-admin-wrap');
+  const target = viewport.querySelector('.hs-imgwrap, .hs-admin-wrap, .explain-shot');
   if(!target) return;
   let scale = 1;
   function apply(){ target.style.transform = `scale(${scale})`; }
+  viewport._hsResetZoom = ()=>{ scale=1; apply(); };
   viewport.addEventListener('wheel', (e)=>{
     if(!e.ctrlKey) return;
     e.preventDefault();
@@ -1061,7 +1085,16 @@ function wireHsZoom(viewport){
   if(zin) zin.addEventListener('click', ()=>{ scale=Math.min(3.5, scale+0.3); apply(); });
   if(zout) zout.addEventListener('click', ()=>{ scale=Math.max(1, scale-0.3); apply(); });
   if(zreset) zreset.addEventListener('click', ()=>{ scale=1; apply(); });
-  if(zfull) zfull.addEventListener('click', ()=>{ viewport.classList.toggle('hs-zoom-full'); });
+  if(zfull) zfull.addEventListener('click', ()=>{
+    const goingFull = !viewport.classList.contains('hs-zoom-full');
+    if(goingFull){
+      document.querySelectorAll('.hs-zoom-viewport.hs-zoom-full').forEach(v=>{ if(v!==viewport){ v.classList.remove('hs-zoom-full'); if(v._hsResetZoom) v._hsResetZoom(); } });
+      viewport.classList.add('hs-zoom-full');
+      document.getElementById('hsZoomBackdrop').classList.add('show');
+    } else {
+      hsExitFullview();
+    }
+  });
 }
 
 function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestionDone){
@@ -1109,7 +1142,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       const slot = block.querySelector('#hsReviewSlot');
       const slide = slides[i];
       if(!slide.image){ slot.innerHTML=''; return; }
-      slot.innerHTML = `<div class="hs-zoom-viewport">${hsZoomControlsHtml}<div class="hs-imgwrap" id="hsReviewWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div>`;
+      slot.innerHTML = `${HS_ZOOM_OPEN}<div class="hs-imgwrap" id="hsReviewWrap${qi}"><img src="${escapeHtml(slide.image)}"></div>${HS_ZOOM_CLOSE}`;
       buildRegionsOnto(slot.querySelector(`#hsReviewWrap${qi}`), slide, { interactive:false, revealCorrect:true });
       wireHsZoom(slot.querySelector('.hs-zoom-viewport'));
     }
@@ -1138,7 +1171,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       <div class="qtext">${escapeHtml(q.question)}</div>
       ${slides.length>1 ? `<div class="hs-step-indicator">Step ${idx+1} of ${slides.length}</div>` : ''}
       ${slide.image
-        ? `<div class="hs-zoom-viewport" style="margin-bottom:14px">${hsZoomControlsHtml}<div class="hs-imgwrap" id="hsSlideWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div>`
+        ? `<div style="margin-bottom:14px">${HS_ZOOM_OPEN}<div class="hs-imgwrap" id="hsSlideWrap${qi}"><img src="${escapeHtml(slide.image)}"></div>${HS_ZOOM_CLOSE}</div>`
         : `<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>`}
       <div class="hs-slide-note" id="hsSlideNote${qi}"></div>
     `;
@@ -1198,7 +1231,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       const slot = block.querySelector('#hsReviewSlot');
       const slide = slides[i];
       if(!slide.image){ slot.innerHTML=''; return; }
-      slot.innerHTML = `<div class="hs-zoom-viewport">${hsZoomControlsHtml}<div class="hs-imgwrap" id="hsSummaryWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div>`;
+      slot.innerHTML = `${HS_ZOOM_OPEN}<div class="hs-imgwrap" id="hsSummaryWrap${qi}"><img src="${escapeHtml(slide.image)}"></div>${HS_ZOOM_CLOSE}`;
       buildRegionsOnto(slot.querySelector(`#hsSummaryWrap${qi}`), slide, { interactive:false, revealCorrect:true });
       wireHsZoom(slot.querySelector('.hs-zoom-viewport'));
     }
@@ -1319,9 +1352,10 @@ function renderActiveLearnerModule(){
               wrap.innerHTML = `
                 <span class="tag">Notes</span>
                 <p>${escapeHtml(q.explanation)}</p>
-                ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
+                ${q.explanationImage ? `${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>${HS_ZOOM_CLOSE}` : ''}
               `;
               block.appendChild(wrap);
+              wireHsZoom(wrap.querySelector('.hs-zoom-viewport'));
             }
             answered.add(qi);
             checkAllAnswered();
@@ -1336,8 +1370,9 @@ function renderActiveLearnerModule(){
           <div class="explain${alreadyDone?' show':''}" id="learnerExplain${qi}">
             <span class="tag">Correct</span>
             <p>${escapeHtml(q.explanation)}</p>
-            ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
+            ${q.explanationImage ? `${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>${HS_ZOOM_CLOSE}` : ''}
           </div>`;
+        wireHsZoom(block.querySelector('.hs-zoom-viewport'));
         if(alreadyDone){
           const correctBtn = block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`);
           if(correctBtn) correctBtn.classList.add('correct');
@@ -1398,8 +1433,9 @@ function renderAnswerKeyQuestion(container, q, qi){
       <div class="explain show">
         <span class="tag">Correct</span>
         <p>${escapeHtml(q.explanation)}</p>
-        ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
+        ${q.explanationImage ? `${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>${HS_ZOOM_CLOSE}` : ''}
       </div>`;
+    wireHsZoom(block.querySelector('.hs-zoom-viewport'));
     const correctBtn = block.querySelector(`.qopts-ak${qi} .opt[data-correct="true"]`);
     if(correctBtn) correctBtn.classList.add('correct');
   }
@@ -2567,7 +2603,12 @@ function hotspotCanvasTemplate(slide){
     return `<div class="upload-box" data-role="hsUploadBox"><div class="uicon">🖼️</div><div class="utext">Click to upload this step's screenshot</div></div>
       <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">`;
   }
-  return `<div class="hs-zoom-viewport" data-role="hsZoomVp">${hsZoomControlsHtml}<div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(slide.image)}"></div></div>
+  return `<div class="hs-zoom-viewport" data-role="hsZoomVp"><div class="hs-zoom-controls">
+    <button type="button" class="hs-zoom-btn" data-role="hsZoomOut" title="Zoom out">−</button>
+    <button type="button" class="hs-zoom-btn" data-role="hsZoomReset" title="Reset zoom">⟲</button>
+    <button type="button" class="hs-zoom-btn" data-role="hsZoomIn" title="Zoom in">+</button>
+    <button type="button" class="hs-zoom-btn" data-role="hsZoomFull" title="Full view">⛶</button>
+  </div><div class="hs-zoom-inner"><div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(slide.image)}"></div></div></div>
     <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
     <div class="hs-tools" data-role="hsTools">
       <button class="hs-tool-btn" data-tool="select" type="button">🖱️ Select <span class="k">(S)</span></button>
