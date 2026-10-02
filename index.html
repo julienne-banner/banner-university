@@ -106,7 +106,10 @@ main{min-width:0}
 .divider{border:0;border-top:1px solid var(--line);margin:32px 0}
 
 /* quiz block */
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:22px 0;box-shadow:var(--shadow)}
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:22px 0;box-shadow:var(--shadow);border-left:1px solid var(--line);transition:border-color .3s ease,background .3s ease}
+.quiz.hs-complete{border-left:4px solid var(--success);background:linear-gradient(to right, var(--success-soft) 0%, var(--surface) 90px)}
+.hs-complete-badge{display:inline-flex;align-items:center;gap:6px;background:var(--success-soft);color:#1F5C3D;font-size:13px;font-weight:700;padding:6px 13px;border-radius:99px;margin-bottom:12px;animation:hscompletepop .4s ease}
+@keyframes hscompletepop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
 .quiz .qtext{font-size:18px;font-weight:600;margin-bottom:18px;line-height:1.4}
 .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:9px;font-size:15px;font-weight:500;color:var(--ink);transition:all .12s}
 .opt:hover:not(:disabled){border-color:var(--coral);background:#fff}
@@ -1219,8 +1222,10 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       return `<button type="button" class="hs-step-chip ${ok?'ok':'bad'}" data-role="hsReviewStep" data-idx="${i}">${i+1} ${ok?'✓':'✕'}</button>`;
     }).join('');
 
+    block.classList.add('hs-complete');
     block.innerHTML = `
       <div class="qtext">${escapeHtml(q.question)}</div>
+      <div class="hs-complete-badge">✓ Section complete</div>
       ${scored.length ? `<div class="hs-summary-score">${correctCount} of ${scored.length} steps correct</div>` : ''}
       ${chips ? `<div class="hs-step-chips">${chips}</div>` : ''}
       <div id="hsReviewSlot"></div>
