@@ -1313,7 +1313,13 @@ function slugify(name){ return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,'
 /* ---------- Supabase connection ---------- */
 const SUPABASE_URL = 'https://lfvgjeeaskvpcxhluzuf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_AeAGZbYLByb8rbUCTVTD7g_ZTQ7l4EQ';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// sessionStorage (not the default localStorage) so each browser TAB keeps
+// its own independent admin login — otherwise logging into Banner admin in
+// one tab and a client admin in another overwrites the same shared session,
+// and refreshing either tab reloads whichever login happened most recently.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storage: window.sessionStorage }
+});
 
 // Escapes free text before it goes into any HTML string we build by hand.
 // Without this, a plain " (or <, >, &) typed into a question, answer,
