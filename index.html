@@ -183,6 +183,13 @@ main{min-width:0}
 .client-card .clogo img{width:100%;height:100%;object-fit:cover}
 .client-card h4{font-size:15px}
 .client-card .curl{font-size:12.5px;color:var(--ink-faint);margin-bottom:14px;font-family:monospace}
+.client-card .link-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;font-family:monospace}
+.client-card .link-row .link-label{color:var(--ink-faint);flex-shrink:0;font-family:var(--body)}
+.client-card .link-row a{color:var(--teal);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.client-card .link-row a:hover{text-decoration:underline}
+.client-card .copy-link-btn{flex-shrink:0;background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:11px;font-family:var(--body);color:var(--ink-soft);cursor:pointer}
+.client-card .copy-link-btn:hover{border-color:var(--coral);color:var(--coral-deep)}
+.client-card .copy-link-btn.copied{border-color:var(--success);color:var(--success)}
 .client-card .cactions{display:flex;gap:8px}
 .client-card .cactions button{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:500;color:var(--ink)}
 .client-card .cactions button:hover{border-color:var(--coral);color:var(--coral-deep)}
@@ -320,6 +327,21 @@ main{min-width:0}
 .hs-slide-note.show{display:block}
 .hs-slide-note.correct{background:var(--success-soft);color:var(--success)}
 .hs-slide-note.wrong{background:var(--coral-soft);color:var(--coral-deep)}
+.hs-summary-score{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:12px}
+.hs-step-chips{display:flex;gap:8px;flex-wrap:wrap}
+.hs-step-chip{background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:7px 13px;font-size:13px;font-weight:600;color:var(--ink-soft)}
+.hs-step-chip:hover{border-color:var(--teal)}
+.hs-step-chip.ok{border-color:var(--success);color:var(--success)}
+.hs-step-chip.bad{border-color:var(--coral);color:var(--coral-deep)}
+.hs-step-chip.active{box-shadow:0 0 0 2px var(--teal) inset}
+
+/* ---------- zoom / full view (shared by learner slides + admin canvas) ---------- */
+.hs-zoom-viewport{position:relative;overflow:auto;border-radius:10px;max-height:460px}
+.hs-zoom-viewport.hs-zoom-full{max-height:82vh}
+.hs-zoom-viewport .hs-imgwrap,.hs-zoom-viewport .hs-admin-wrap{transform-origin:0 0}
+.hs-zoom-controls{position:sticky;top:8px;left:100%;width:fit-content;z-index:20;display:flex;gap:4px;margin-bottom:-36px;margin-right:8px}
+.hs-zoom-btn{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:6px;width:28px;height:28px;font-size:14px;color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);flex-shrink:0}
+.hs-zoom-btn:hover{border-color:var(--teal);color:var(--teal)}
 
 /* ---------- scored-assessment warning screen ---------- */
 .score-pill{display:inline-block;font-size:12.5px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:4px 11px;border-radius:99px;margin-bottom:14px}
@@ -391,8 +413,11 @@ main{min-width:0}
 .hs-focus-remove{border:0;text-decoration:underline;text-underline-offset:2px;padding:0;margin-top:10px}
 
 /* ---------- hotspot question (learner-facing) ---------- */
-.hs-hotspot{position:absolute;border-radius:6px;border:2px solid transparent;background:transparent;cursor:pointer;transition:background .15s ease,border-color .15s ease}
-.hs-hotspot:hover{background:rgba(31,111,107,.14);border-color:rgba(31,111,107,.45)}
+.hs-hotspot{position:absolute;border-radius:6px;border:2px solid rgba(31,111,107,.5);background:rgba(31,111,107,.07);cursor:pointer;transition:background .15s ease,border-color .15s ease;animation:hshotspotpulse 1.8s ease-in-out infinite}
+.hs-hotspot:hover{background:rgba(31,111,107,.2);border-color:rgba(31,111,107,.85)}
+@keyframes hshotspotpulse{0%,100%{box-shadow:0 0 0 0 rgba(31,111,107,.3)}50%{box-shadow:0 0 0 6px rgba(31,111,107,0)}}
+.hs-hotspot.tried-wrong,.hs-hotspot.is-correct{animation:none}
+@media (prefers-reduced-motion:reduce){.hs-hotspot{animation:none}}
 .hs-hotspot.tried-wrong{background:rgba(225,80,61,.16);border-color:var(--coral);cursor:not-allowed;pointer-events:none}
 .hs-hotspot.is-correct{background:rgba(47,133,88,.2);border-color:var(--success);pointer-events:none}
 .hs-hotspot.shake{animation:hsshake .4s ease}
@@ -1008,50 +1033,50 @@ function goToNextModule(){
   renderActiveLearnerModule();
 }
 
+const hsZoomControlsHtml = `<div class="hs-zoom-controls">
+  <button type="button" class="hs-zoom-btn" data-role="hsZoomOut" title="Zoom out">−</button>
+  <button type="button" class="hs-zoom-btn" data-role="hsZoomReset" title="Reset zoom">⟲</button>
+  <button type="button" class="hs-zoom-btn" data-role="hsZoomIn" title="Zoom in">+</button>
+  <button type="button" class="hs-zoom-btn" data-role="hsZoomFull" title="Toggle full view">⛶</button>
+</div>`;
+
+function wireHsZoom(viewport){
+  if(!viewport || viewport._hsZoomWired) return;
+  viewport._hsZoomWired = true;
+  const target = viewport.querySelector('.hs-imgwrap, .hs-admin-wrap');
+  if(!target) return;
+  let scale = 1;
+  function apply(){ target.style.transform = `scale(${scale})`; }
+  viewport.addEventListener('wheel', (e)=>{
+    if(!e.ctrlKey) return;
+    e.preventDefault();
+    const delta = e.deltaY>0 ? -0.15 : 0.15;
+    scale = Math.min(3.5, Math.max(1, scale+delta));
+    apply();
+  }, { passive:false });
+  const zin = viewport.querySelector('[data-role="hsZoomIn"]');
+  const zout = viewport.querySelector('[data-role="hsZoomOut"]');
+  const zreset = viewport.querySelector('[data-role="hsZoomReset"]');
+  const zfull = viewport.querySelector('[data-role="hsZoomFull"]');
+  if(zin) zin.addEventListener('click', ()=>{ scale=Math.min(3.5, scale+0.3); apply(); });
+  if(zout) zout.addEventListener('click', ()=>{ scale=Math.max(1, scale-0.3); apply(); });
+  if(zreset) zreset.addEventListener('click', ()=>{ scale=1; apply(); });
+  if(zfull) zfull.addEventListener('click', ()=>{ viewport.classList.toggle('hs-zoom-full'); });
+}
+
 function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestionDone){
   const slides = (q.slides && q.slides.length) ? q.slides : [{image:'', regions:[], focusArea:null}];
+  const results = []; // per-slide true/false/null, fresh-attempt only
   let idx = 0;
 
-  function showNextControl(isLast){
-    if(isLast){
-      // last step — no button needed, this question auto-completes itself
-      setTimeout(()=>{ onQuestionDone(); }, 900);
-      return;
-    }
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn-next';
-    btn.style.marginTop = '14px';
-    btn.textContent = 'Next step →';
-    block.appendChild(btn);
-    btn.addEventListener('click', ()=>{
-      idx++;
-      if(idx>=slides.length){ onQuestionDone(); return; }
-      renderSlide();
-    });
-  }
-
-  function renderSlide(){
-    const slide = slides[idx];
-    block.innerHTML = `
-      <div class="qtext">${escapeHtml(q.question)}</div>
-      ${slides.length>1 ? `<div class="hs-step-indicator">Step ${idx+1} of ${slides.length}</div>` : ''}
-      ${slide.image
-        ? `<div class="hs-imgwrap" id="hsSlideWrap${qi}" style="margin-bottom:14px"><img src="${escapeHtml(slide.image)}"></div>`
-        : `<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>`}
-      <div class="hs-slide-note" id="hsSlideNote${qi}"></div>
-    `;
-
-    if(!slide.image){ showNextControl(idx>=slides.length-1); return; }
-
-    const wrap = block.querySelector(`#hsSlideWrap${qi}`);
+  function buildRegionsOnto(wrap, slide, { interactive, revealCorrect }){
     if(slide.focusArea){
       const fb = document.createElement('div');
       fb.className = 'hs-learner-focusbox';
       fb.style.left=slide.focusArea.x+'%'; fb.style.top=slide.focusArea.y+'%'; fb.style.width=slide.focusArea.w+'%'; fb.style.height=slide.focusArea.h+'%';
       wrap.appendChild(fb);
     }
-    const built = (slide.regions||[]).map(r=>{
+    return (slide.regions||[]).map(r=>{
       const el = document.createElement('div');
       el.className = 'hs-hotspot';
       el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
@@ -1061,35 +1086,135 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       badge.style.left = `calc(${r.x + r.w}% - 10px)`;
       badge.style.top = `calc(${r.y}% - 10px)`;
       wrap.appendChild(badge);
+      if(revealCorrect && r.correct){ el.classList.add('is-correct'); badge.classList.add('show','right'); badge.textContent='✓'; }
+      if(!interactive){ el.style.pointerEvents='none'; el.style.animation='none'; }
       return {r, el, badge};
     });
+  }
 
-    if(alreadyDone){
-      built.forEach(({r,el,badge})=>{ if(r.correct){ el.classList.add('is-correct'); badge.classList.add('show','right'); badge.textContent='✓'; } el.style.pointerEvents='none'; });
-      showNextControl(idx>=slides.length-1);
-      return;
+  // ---------- review-only mode (an already-completed module, or the Answer Guide) ----------
+  if(alreadyDone){
+    renderReviewOnly();
+    return;
+  }
+  function renderReviewOnly(){
+    const chips = slides.map((s,i)=> s.image ? `<button type="button" class="hs-step-chip" data-role="hsReviewStep" data-idx="${i}">Step ${i+1}</button>` : '').join('');
+    block.innerHTML = `
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      ${chips ? `<div class="hs-step-chips">${chips}</div>` : ''}
+      <div id="hsReviewSlot"></div>
+    `;
+    function showStep(i){
+      block.querySelectorAll('[data-role="hsReviewStep"]').forEach(c=>c.classList.toggle('active', +c.dataset.idx===i));
+      const slot = block.querySelector('#hsReviewSlot');
+      const slide = slides[i];
+      if(!slide.image){ slot.innerHTML=''; return; }
+      slot.innerHTML = `<div class="hs-zoom-viewport">${hsZoomControlsHtml}<div class="hs-imgwrap" id="hsReviewWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div>`;
+      buildRegionsOnto(slot.querySelector(`#hsReviewWrap${qi}`), slide, { interactive:false, revealCorrect:true });
+      wireHsZoom(slot.querySelector('.hs-zoom-viewport'));
     }
+    block.querySelectorAll('[data-role="hsReviewStep"]').forEach(chip=>{
+      chip.addEventListener('click', ()=> showStep(+chip.dataset.idx));
+    });
+    const firstScorable = slides.findIndex(s=>s.image);
+    if(firstScorable>=0) showStep(firstScorable);
+  }
+
+  // ---------- fresh attempt: auto-advance, timed reveal, then a review summary ----------
+  function fadeTo(renderFn){
+    block.style.transition = 'opacity .22s ease';
+    block.style.opacity = '0';
+    setTimeout(()=>{ renderFn(); block.style.opacity = '1'; }, 200);
+  }
+  function advance(){
+    idx++;
+    if(idx>=slides.length){ fadeTo(renderSummary); return; }
+    fadeTo(renderSlide);
+  }
+
+  function renderSlide(){
+    const slide = slides[idx];
+    block.innerHTML = `
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      ${slides.length>1 ? `<div class="hs-step-indicator">Step ${idx+1} of ${slides.length}</div>` : ''}
+      ${slide.image
+        ? `<div class="hs-zoom-viewport" style="margin-bottom:14px">${hsZoomControlsHtml}<div class="hs-imgwrap" id="hsSlideWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div>`
+        : `<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>`}
+      <div class="hs-slide-note" id="hsSlideNote${qi}"></div>
+    `;
+
+    if(!slide.image){ results[idx] = null; setTimeout(advance, 400); return; }
+
+    const wrap = block.querySelector(`#hsSlideWrap${qi}`);
+    wireHsZoom(block.querySelector('.hs-zoom-viewport'));
+    const built = buildRegionsOnto(wrap, slide, { interactive:true, revealCorrect:false });
 
     built.forEach(({r,el,badge})=>{
       el.addEventListener('click', ()=>{
         built.forEach(other=>{
           other.el.style.pointerEvents = 'none';
+          other.el.style.animation = 'none';
           if(other.r.correct){ other.el.classList.add('is-correct'); other.badge.classList.add('show','right'); other.badge.textContent='✓'; }
         });
         const noteEl = block.querySelector(`#hsSlideNote${qi}`);
+        let delay;
         if(r.correct){
           el.classList.add('pop');
           noteEl.textContent = '✓ Correct.';
           noteEl.className = 'hs-slide-note show correct';
+          results[idx] = true;
+          delay = 700;
         } else {
           el.classList.add('tried-wrong','shake');
           noteEl.textContent = '✕ Not quite — the correct spot is highlighted above.';
           noteEl.className = 'hs-slide-note show wrong';
+          results[idx] = false;
+          delay = 2000;
         }
         onSlideResult(r.correct);
-        showNextControl(idx>=slides.length-1);
+        setTimeout(advance, delay);
       });
     });
+  }
+
+  function renderSummary(){
+    const scored = results.filter(r=>r!==null && r!==undefined);
+    const correctCount = scored.filter(r=>r===true).length;
+    const chips = slides.map((s,i)=>{
+      if(results[i]!==true && results[i]!==false) return '';
+      const ok = results[i]===true;
+      return `<button type="button" class="hs-step-chip ${ok?'ok':'bad'}" data-role="hsReviewStep" data-idx="${i}">${i+1} ${ok?'✓':'✕'}</button>`;
+    }).join('');
+
+    block.innerHTML = `
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      ${scored.length ? `<div class="hs-summary-score">${correctCount} of ${scored.length} steps correct</div>` : ''}
+      ${chips ? `<div class="hs-step-chips">${chips}</div>` : ''}
+      <div id="hsReviewSlot"></div>
+    `;
+
+    function showStep(i){
+      block.querySelectorAll('[data-role="hsReviewStep"]').forEach(c=>c.classList.toggle('active', +c.dataset.idx===i));
+      const slot = block.querySelector('#hsReviewSlot');
+      const slide = slides[i];
+      if(!slide.image){ slot.innerHTML=''; return; }
+      slot.innerHTML = `<div class="hs-zoom-viewport">${hsZoomControlsHtml}<div class="hs-imgwrap" id="hsSummaryWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div>`;
+      buildRegionsOnto(slot.querySelector(`#hsSummaryWrap${qi}`), slide, { interactive:false, revealCorrect:true });
+      wireHsZoom(slot.querySelector('.hs-zoom-viewport'));
+    }
+    block.querySelectorAll('[data-role="hsReviewStep"]').forEach(chip=>{
+      chip.addEventListener('click', ()=> showStep(+chip.dataset.idx));
+    });
+    const firstScored = results.findIndex(r=>r===true||r===false);
+    if(firstScored>=0) showStep(firstScored);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-next';
+    btn.style.marginTop = '16px';
+    btn.textContent = 'Continue';
+    block.appendChild(btn);
+    btn.addEventListener('click', ()=> onQuestionDone());
   }
 
   renderSlide();
@@ -1475,6 +1600,7 @@ let editingIndex = null;
 function slugify(name){ return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,''); }
 
 /* ---------- Supabase connection ---------- */
+const SITE_ORIGIN = 'https://banner-university.onrender.com';
 const SUPABASE_URL = 'https://lfvgjeeaskvpcxhluzuf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_AeAGZbYLByb8rbUCTVTD7g_ZTQ7l4EQ';
 // sessionStorage (not the default localStorage) so each browser TAB keeps
@@ -2090,8 +2216,16 @@ function clientCardTemplate(c, idx){
       <button type="button" class="danger" data-role="deletebtn">Delete permanently</button>
     </div>
     <div class="chead"><div class="clogo">${logo}</div><h4>${escapeHtml(c.name)}</h4></div>
-    <div class="curl">Learner link: yourdomain.com/${c.slug}</div>
-    <div class="curl">Client-admin link: yourdomain.com/${c.slug}admin</div>
+    <div class="link-row">
+      <span class="link-label">Learner:</span>
+      <a href="${SITE_ORIGIN}/${c.slug}" target="_blank" rel="noopener" title="${SITE_ORIGIN}/${c.slug}">${SITE_ORIGIN}/${c.slug}</a>
+      <button type="button" class="copy-link-btn" data-role="copylink" data-link="${SITE_ORIGIN}/${c.slug}">Copy</button>
+    </div>
+    <div class="link-row">
+      <span class="link-label">Admin:</span>
+      <a href="${SITE_ORIGIN}/${c.slug}admin" target="_blank" rel="noopener" title="${SITE_ORIGIN}/${c.slug}admin">${SITE_ORIGIN}/${c.slug}admin</a>
+      <button type="button" class="copy-link-btn" data-role="copylink" data-link="${SITE_ORIGIN}/${c.slug}admin">Copy</button>
+    </div>
     <div class="cactions"><button type="button" data-role="managequizzes">Manage quizzes</button><button type="button" data-role="editbtn">Edit</button></div>
   </div>`;
 }
@@ -2099,7 +2233,11 @@ function archivedCardTemplate(c, idx){
   const logo = c.logo ? `<img src="${escapeHtml(c.logo)}">` : escapeHtml(c.initials);
   return `<div class="client-card" data-idx="${idx}">
     <div class="chead"><div class="clogo">${logo}</div><h4>${escapeHtml(c.name)}</h4></div>
-    <div class="curl">yourdomain.com/${c.slug}</div>
+    <div class="link-row">
+      <span class="link-label">Learner:</span>
+      <a href="${SITE_ORIGIN}/${c.slug}" target="_blank" rel="noopener" title="${SITE_ORIGIN}/${c.slug}">${SITE_ORIGIN}/${c.slug}</a>
+      <button type="button" class="copy-link-btn" data-role="copylink" data-link="${SITE_ORIGIN}/${c.slug}">Copy</button>
+    </div>
     <div class="cactions"><button type="button" data-role="restorebtn" style="flex:1">Restore</button></div>
   </div>`;
 }
@@ -2177,6 +2315,20 @@ document.addEventListener('click', async (e)=>{
   if(error){ console.error('Restore learner failed:', error); btn.disabled = false; return; }
   if(document.getElementById('adminView').classList.contains('active')) loadArchivedLearners();
   if(document.getElementById('clientAdminView').classList.contains('active')) loadCaArchivedLearners(currentClientAdminClient);
+});
+
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-role="copylink"]');
+  if(!btn) return;
+  try{
+    await navigator.clipboard.writeText(btn.dataset.link);
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+  } catch(err){
+    console.error('Copy failed:', err);
+  }
 });
 
 /* ---- client card actions (delegated) ---- */
@@ -2415,7 +2567,7 @@ function hotspotCanvasTemplate(slide){
     return `<div class="upload-box" data-role="hsUploadBox"><div class="uicon">🖼️</div><div class="utext">Click to upload this step's screenshot</div></div>
       <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">`;
   }
-  return `<div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(slide.image)}"></div>
+  return `<div class="hs-zoom-viewport" data-role="hsZoomVp">${hsZoomControlsHtml}<div class="hs-imgwrap hs-admin-wrap" tabindex="0" data-role="hsWrap"><img src="${escapeHtml(slide.image)}"></div></div>
     <input type="file" accept="image/*" style="display:none" data-role="hsFileInput">
     <div class="hs-tools" data-role="hsTools">
       <button class="hs-tool-btn" data-tool="select" type="button">🖱️ Select <span class="k">(S)</span></button>
@@ -2456,6 +2608,7 @@ function switchToSlide(cardEl, idx){
   cardEl.hsActiveSlideIndex = idx;
   const canvasArea = cardEl.querySelector('[data-role="hsCanvasArea"]');
   canvasArea.innerHTML = hotspotCanvasTemplate(cardEl.hsSlides[idx]);
+  wireHsZoom(canvasArea.querySelector('[data-role="hsZoomVp"]'));
   if(cardEl.hsSlides[idx].image) hsInitCard(cardEl, cardEl.hsSlides[idx]);
   else cardEl.hsState = null;
   renderSlideNavFor(cardEl);
@@ -2495,10 +2648,26 @@ function qcardTemplate(q){
 /* ---------- image-hotspot admin interaction (scoped per card) ---------- */
 let hsActiveCard = null;
 document.addEventListener('keydown', (e)=>{
-  if(e.metaKey||e.ctrlKey||e.altKey) return;
   if(!hsActiveCard || !document.body.contains(hsActiveCard)) return;
   const tag = (e.target.tagName||'').toLowerCase();
   if(tag==='input' || tag==='textarea' || e.target.isContentEditable) return;
+
+  // undo — Ctrl+Z (Windows/Linux) or Cmd+Z (Mac)
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){
+    e.preventDefault();
+    hsUndo(hsActiveCard);
+    return;
+  }
+
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+
+  // delete the currently-selected region(s)/focus area
+  if(e.key==='Delete' || e.key==='Backspace'){
+    e.preventDefault();
+    hsDeleteSelected(hsActiveCard);
+    return;
+  }
+
   const key = e.key.toLowerCase();
   if(key==='r'){ e.preventDefault(); hsSetTool(hsActiveCard,'draw'); }
   else if(key==='s'){ e.preventDefault(); hsSetTool(hsActiveCard,'select'); }
@@ -2521,6 +2690,43 @@ function hsSetTool(cardEl, tool){
   hsRenderAll(cardEl);
 }
 
+function hsSnapshotForUndo(cardEl){
+  if(!cardEl.hsUndoStack) cardEl.hsUndoStack = [];
+  const state = cardEl.hsState;
+  if(!state) return;
+  cardEl.hsUndoStack.push({
+    regions: state.regions.map(r=>({...r})),
+    focusArea: state.focusArea ? {...state.focusArea} : null,
+    nextId: state.nextId
+  });
+  if(cardEl.hsUndoStack.length>25) cardEl.hsUndoStack.shift();
+}
+function hsUndo(cardEl){
+  if(!cardEl || !cardEl.hsState || !cardEl.hsUndoStack || cardEl.hsUndoStack.length===0) return;
+  const prev = cardEl.hsUndoStack.pop();
+  cardEl.hsState.regions = prev.regions;
+  cardEl.hsState.focusArea = prev.focusArea;
+  cardEl.hsState.nextId = prev.nextId;
+  cardEl.hsState.selectedIds.clear();
+  cardEl.hsState.selectedFocus = false;
+  hsRenderAll(cardEl);
+}
+function hsDeleteSelected(cardEl){
+  if(!cardEl || !cardEl.hsState) return;
+  const state = cardEl.hsState;
+  if(state.selectedIds.size===0 && !state.selectedFocus) return;
+  hsSnapshotForUndo(cardEl);
+  if(state.selectedIds.size>0){
+    state.regions = state.regions.filter(r=>!state.selectedIds.has(r.id));
+    state.selectedIds.clear();
+  }
+  if(state.selectedFocus){
+    state.focusArea = null;
+    state.selectedFocus = false;
+  }
+  hsRenderAll(cardEl);
+}
+
 function hsAttachHandles(cardEl, container, dataRef){
   const wrap = cardEl.querySelector('[data-role="hsWrap"]');
   ['ne','sw','se'].forEach(corner=>{
@@ -2529,6 +2735,7 @@ function hsAttachHandles(cardEl, container, dataRef){
     container.appendChild(h);
     h.addEventListener('mousedown', (e)=>{
       e.stopPropagation(); e.preventDefault();
+      hsSnapshotForUndo(cardEl);
       const rect = wrap.getBoundingClientRect();
       const start = {x:dataRef.x, y:dataRef.y, w:dataRef.w, h:dataRef.h};
       const x2 = start.x+start.w, y2 = start.y+start.h;
@@ -2623,6 +2830,7 @@ function hsWireWrap(cardEl){
           if(clickedFocus) state.selectedFocus = true;
           hsRenderAll(cardEl);
         }
+        hsSnapshotForUndo(cardEl);
         const rect = wrap.getBoundingClientRect();
         const moveStart = {x:e.clientX, y:e.clientY, rectW:rect.width, rectH:rect.height};
         const moveOrigins = {
@@ -2699,6 +2907,7 @@ function hsWireWrap(cardEl){
       x:(br.left-rect.left)/rect.width*100, y:(br.top-rect.top)/rect.height*100,
       w:br.width/rect.width*100, h:br.height/rect.height*100
     };
+    hsSnapshotForUndo(cardEl);
     if(state.currentTool==='focus'){
       state.focusArea = box;
     } else {
@@ -2729,6 +2938,7 @@ function mountQcard(q){
       : [{ image:'', regions:[], focusArea:null }];
     cardEl.hsSlides = slides;
     cardEl.hsActiveSlideIndex = 0;
+    wireHsZoom(cardEl.querySelector('[data-role="hsZoomVp"]'));
     if(slides[0].image) hsInitCard(cardEl, slides[0]);
   }
   return cardEl;
@@ -2947,6 +3157,7 @@ document.getElementById('qcardList').addEventListener('click', (e)=>{
   if(e.target.closest('[data-role="hsdel"]')){
     const card = e.target.closest('.qcard');
     const idx = +e.target.closest('[data-role="hsdel"]').dataset.idx;
+    hsSnapshotForUndo(card);
     const removedId = card.hsState.regions[idx].id;
     card.hsState.selectedIds.delete(removedId);
     card.hsState.regions.splice(idx,1);
@@ -2955,6 +3166,7 @@ document.getElementById('qcardList').addEventListener('click', (e)=>{
   }
   if(e.target.closest('[data-role="hsClear"]')){
     const card = e.target.closest('.qcard');
+    hsSnapshotForUndo(card);
     card.hsState.regions=[]; card.hsState.focusArea=null;
     card.hsState.selectedIds.clear(); card.hsState.selectedFocus=false;
     hsRenderAll(card);
@@ -2962,6 +3174,7 @@ document.getElementById('qcardList').addEventListener('click', (e)=>{
   }
   if(e.target.closest('[data-role="hsRemoveFocus"]')){
     const card = e.target.closest('.qcard');
+    hsSnapshotForUndo(card);
     card.hsState.focusArea=null; card.hsState.selectedFocus=false;
     hsRenderAll(card);
     return;
@@ -3008,6 +3221,7 @@ document.getElementById('qcardList').addEventListener('change', (e)=>{
       card.hsSlides[idx] = { image: ev.target.result, regions: [], focusArea: null };
       const canvasArea = card.querySelector('[data-role="hsCanvasArea"]');
       canvasArea.innerHTML = hotspotCanvasTemplate(card.hsSlides[idx]);
+      wireHsZoom(canvasArea.querySelector('[data-role="hsZoomVp"]'));
       hsInitCard(card, card.hsSlides[idx]);
       renderSlideNavFor(card);
     };
