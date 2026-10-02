@@ -129,6 +129,7 @@ main{min-width:0}
 
 .modfooter{margin:36px 0 0;display:flex;align-items:center;gap:14px}
 .btn-next{background:var(--coral);color:#fff;border:0;border-radius:var(--radius-sm);padding:12px 22px;font-size:15px;font-weight:600}
+#nextModuleBtn{background:var(--teal)}
 .btn-next:hover{background:var(--coral-deep)}
 .btn-next:disabled{background:#D7DBE0;cursor:not-allowed}
 .gatehint{font-size:13px;color:var(--ink-faint)}
@@ -136,12 +137,10 @@ main{min-width:0}
 /* ---------- admin ---------- */
 .admin{display:none;min-height:100vh;background:var(--bg)}
 .admin.active{display:block}
-.admin-top{background:var(--surface);border-bottom:1px solid var(--line);padding:22px 40px;position:relative}
-.admin-back-btn{position:absolute;top:22px;right:40px;background:none;border:1.5px solid var(--line);color:var(--ink-soft);font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:var(--radius-sm)}
-.admin-back-btn:hover{border-color:var(--coral);color:var(--coral-deep)}
-.admin-top h1{font-size:22px}
-.admin-top p{color:var(--ink-soft);font-size:14px;margin-top:2px}
 .admin-wrap{max-width:1080px;margin:0 auto;padding:32px 40px 80px}
+.ca-screen{display:none}
+.ca-screen.active{display:block}
+.admin-sb-email{font-size:12px;color:var(--ink-faint);word-break:break-all;margin-bottom:2px}
 .admin-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:32px}
 .admin-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:18px 20px}
 .admin-card .mlabel{font-size:12.5px;color:var(--ink-faint);font-weight:500}
@@ -168,9 +167,7 @@ main{min-width:0}
 .status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
 
 /* ---------- admin: tabs & content management ---------- */
-.admin-tabs{display:flex;gap:4px;margin-top:14px}
-.admin-tab{background:none;border:0;padding:8px 4px;font-size:14.5px;font-weight:600;color:var(--ink-faint);border-bottom:2.5px solid transparent;margin-right:20px}
-.admin-tab.active{color:var(--coral-deep);border-bottom-color:var(--coral)}
+
 .admin-screen{display:none}
 .admin-screen.active{display:block}
 
@@ -337,21 +334,8 @@ main{min-width:0}
 .celebration-modal{text-align:center;position:relative;z-index:2}
 .celebration-emoji{font-size:46px;margin-bottom:6px}
 
-/* ---------- client-admin dashboard layout ---------- */
-.ca-shell{display:grid;grid-template-columns:272px 1fr;min-height:100vh}
-.ca-sidebar{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:100vh}
-.ca-sb-profile{padding:20px 22px 0}
-.ca-sb-profile .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);margin-bottom:5px}
-.ca-sb-profile .uemail{font-size:13px;color:var(--ink-soft);word-break:break-all;line-height:1.4}
-.ca-sidebar-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:20px 22px;border-top:1px solid var(--line-soft)}
-.ca-main{padding:40px 44px}
-.ca-main h1{font-size:24px;margin-bottom:22px}
-@media (max-width:880px){
-  .ca-shell{grid-template-columns:1fr}
-  .ca-sidebar{min-height:auto}
-  .ca-sidebar-actions{margin-top:0;flex-direction:row;flex-wrap:wrap}
-  .ca-main{padding:24px 20px}
-}
+/* ---------- admin content h1 (both admin views share .admin-wrap) ---------- */
+.ca-screen h1{font-size:24px;margin-bottom:22px}
 
 /* ---------- signup/login toggle + errors ---------- */
 .auth-toggle{display:flex;gap:6px;margin:18px 0 4px;background:var(--bg);border-radius:10px;padding:4px}
@@ -574,28 +558,53 @@ main{min-width:0}
 
 <!-- ============ CLIENT ADMIN DASHBOARD (read-only) ============ -->
 <div class="admin" id="clientAdminView">
-  <div class="ca-shell">
-    <aside class="ca-sidebar">
+  <div class="shell active">
+    <div class="sidebar-backdrop" id="caSidebarBackdrop"></div>
+    <aside class="sidebar" id="caSidebar">
+      <button class="sidebar-close" id="caSidebarCloseBtn" type="button" aria-label="Close menu">✕</button>
       <div class="sb-brand">
         <div class="client-logo" id="caSbClientLogo">AH</div>
         <span class="cname" id="caSbClientName">April Housing</span>
       </div>
-
-      <div class="ca-sb-profile">
-        <div class="label">Signed in as</div>
-        <div class="uemail" id="caSbEmail">—</div>
-      </div>
-
-      <div class="ca-sidebar-actions">
+      <nav class="sb-nav">
+        <div class="navlabel">Admin</div>
+        <button class="navitem ca-tab active" data-ca-tab="dashboard" type="button">Dashboard</button>
+        <button class="navitem ca-tab" data-ca-tab="answerkey" type="button">Answer Guide</button>
+        <button class="navitem ca-tab" data-ca-tab="archived" type="button">Archived</button>
+      </nav>
+      <div class="sb-foot">
+        <div class="admin-sb-email" id="caSbEmail">—</div>
         <button type="button" class="sb-footbtn" id="clientAdminRefreshBtn">↻ Refresh</button>
         <button type="button" class="sb-footbtn" id="clientAdminActivityLogBtn">📋 Activity log</button>
         <button type="button" class="sb-footbtn danger" id="clientAdminLogoutBtn">← Log out</button>
       </div>
     </aside>
-    <main class="ca-main">
-      <h1>Training participation — <span id="caClientName">—</span></h1>
-      <div id="clientAdminDashboard">
-        <p style="color:var(--ink-faint);font-style:italic">Loading…</p>
+    <main>
+      <div class="topbar">
+        <button class="menubtn" id="caMenuBtn">☰ Menu</button>
+        <span class="crumb">Admin</span>
+      </div>
+      <div class="admin-wrap">
+        <div class="ca-screen active" id="caScreenDashboard">
+          <h1>Training participation — <span id="caClientName">—</span></h1>
+          <div id="clientAdminDashboard">
+            <p style="color:var(--ink-faint);font-style:italic">Loading…</p>
+          </div>
+        </div>
+        <div class="ca-screen" id="caScreenAnswerKey">
+          <h1>Answer Guide — <span id="caAkClientName">—</span></h1>
+          <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:20px">Every published question with the correct answer already revealed — a quick reference for anyone checking the training content itself.</p>
+          <div id="answerKeyList">
+            <p style="color:var(--ink-faint);font-style:italic">Loading…</p>
+          </div>
+        </div>
+        <div class="ca-screen" id="caScreenArchived">
+          <h1>Archived learners</h1>
+          <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:20px">Hidden from your main dashboard — handy for accidental duplicate sign-ups. Restore anyone back anytime.</p>
+          <div id="caArchivedList">
+            <p style="color:var(--ink-faint);font-style:italic">Loading…</p>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -644,24 +653,44 @@ main{min-width:0}
 
       <div id="learnerQuizList"></div>
       <div id="learnerModuleFlashcards"></div>
+
+      <div class="modfooter">
+        <button class="btn-next" id="completeBtn" disabled>Mark module complete</button>
+        <button class="btn-next" id="nextModuleBtn" style="display:none">Next module →</button>
+        <span class="gatehint" id="gateHint">Answer the question above to continue</span>
+      </div>
     </div>
   </main>
 </div>
 
-<!-- ============ ADMIN VIEW ============ -->
+<!-- ============ ADMIN VIEW (Banner) ============ -->
 <div class="admin" id="adminView">
-  <div class="admin-top">
-    <button class="admin-back-btn" id="adminBackToLogin">← Log out</button>
-    <button class="admin-back-btn" id="bannerActivityLogBtn" style="right:130px">📋 Activity log</button>
-    <h1>Banner University — Admin</h1>
-    <p>Manage clients, quizzes, and view onboarding progress</p>
-    <div class="admin-tabs">
-      <button class="admin-tab active" data-tab="progress">Progress</button>
-      <button class="admin-tab" data-tab="clients">Clients</button>
-      <button class="admin-tab" data-tab="archived">Archived</button>
-    </div>
-  </div>
-
+  <div class="shell active">
+    <div class="sidebar-backdrop" id="bannerSidebarBackdrop"></div>
+    <aside class="sidebar" id="bannerSidebar">
+      <button class="sidebar-close" id="bannerSidebarCloseBtn" type="button" aria-label="Close menu">✕</button>
+      <div class="sb-brand">
+        <div class="client-logo">BU</div>
+        <span class="cname">Banner University</span>
+      </div>
+      <nav class="sb-nav">
+        <div class="navlabel">Admin</div>
+        <button class="navitem admin-tab active" data-tab="progress" type="button">Progress</button>
+        <button class="navitem admin-tab" data-tab="clients" type="button">Clients</button>
+        <button class="navitem admin-tab" data-tab="archived" type="button">Archived</button>
+      </nav>
+      <div class="sb-foot">
+        <div class="admin-sb-email" id="bannerSbEmail">—</div>
+        <button type="button" class="sb-footbtn" id="bannerRefreshBtn">↻ Refresh</button>
+        <button type="button" class="sb-footbtn" id="bannerActivityLogBtn">📋 Activity log</button>
+        <button type="button" class="sb-footbtn danger" id="adminBackToLogin">← Log out</button>
+      </div>
+    </aside>
+    <main>
+      <div class="topbar">
+        <button class="menubtn" id="bannerMenuBtn">☰ Menu</button>
+        <span class="crumb">Banner University — Admin</span>
+      </div>
   <div class="admin-wrap">
   <div class="admin-screen active" id="screenProgress">
     <div id="progressDashboard">
@@ -703,6 +732,11 @@ main{min-width:0}
     <div class="section-head"><h2>Archived clients</h2></div>
     <p class="archived-note">Archived clients' sites go offline, but nothing is deleted — restore any of them anytime.</p>
     <div class="client-cards" id="archivedCardsList"></div>
+
+    <hr class="divider" style="margin:36px 0 24px">
+    <div class="section-head"><h2>Archived learners</h2></div>
+    <p class="archived-note">Hidden from the main Progress list — handy for accidental duplicate sign-ups. Restore anyone back anytime.</p>
+    <div id="archivedLearnersList"><p style="color:var(--ink-faint);font-style:italic">Loading…</p></div>
   </div>
   <!-- /screenArchived -->
 
@@ -741,6 +775,8 @@ main{min-width:0}
   </div>
   <!-- /screenQuizzes -->
   </div>
+    </main>
+  </div>
 </div>
 
 <div class="gloss-overlay" id="glossOverlay">
@@ -764,6 +800,7 @@ main{min-width:0}
 
 <div class="row-menu-floating" id="floatingRowMenu">
   <button type="button" data-role="resetprogress">Reset progress</button>
+  <button type="button" data-role="archivelearner">Archive user</button>
 </div>
 
 <div class="gloss-overlay" id="activityLogOverlay">
@@ -814,6 +851,21 @@ document.getElementById('menuBtn').addEventListener('click', ()=>{
 });
 document.getElementById('sidebarCloseBtn').addEventListener('click', closeMobileSidebar);
 document.getElementById('sidebarBackdrop').addEventListener('click', closeMobileSidebar);
+
+// same mobile collapse behavior, reused for both admin sidebars
+function wireMobileSidebar(sidebarId, backdropId, menuBtnId, closeBtnId){
+  const sidebar = document.getElementById(sidebarId);
+  const backdrop = document.getElementById(backdropId);
+  function open(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function close(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  document.getElementById(menuBtnId).addEventListener('click', ()=>{
+    sidebar.classList.contains('open') ? close() : open();
+  });
+  document.getElementById(closeBtnId).addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+}
+wireMobileSidebar('bannerSidebar','bannerSidebarBackdrop','bannerMenuBtn','bannerSidebarCloseBtn');
+wireMobileSidebar('caSidebar','caSidebarBackdrop','caMenuBtn','caSidebarCloseBtn');
 
 let currentLearner = null;
 let activeLearnerModuleId = null;
@@ -904,8 +956,12 @@ function showCelebration(scorePct, isCourseComplete, onContinue){
   btn.addEventListener('click', handler);
 }
 
-async function autoCompleteModule(){
+async function markModuleComplete(){
   if(!currentLearner || !activeLearnerModuleId) return;
+  const btn = document.getElementById('completeBtn');
+  const gateHint = document.getElementById('gateHint');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
 
   // re-fetch the current tab list right now, rather than trusting whatever
   // was loaded at login — avoids wrongly marking "all done" if a tab was
@@ -929,6 +985,9 @@ async function autoCompleteModule(){
 
   if(error){
     console.error('save_progress error:', error);
+    btn.textContent = 'Mark module complete';
+    btn.disabled = false;
+    gateHint.textContent = "Couldn't save — check your connection and try again.";
     return;
   }
 
@@ -936,10 +995,17 @@ async function autoCompleteModule(){
   renderLearnerNav();
 
   showCelebration(scorePct, allComplete, ()=>{
-    const next = modules.find(m=>!(progress[m.id] && progress[m.id].done));
-    if(next){ activeLearnerModuleId = next.id; renderLearnerNav(); }
     renderActiveLearnerModule();
   });
+}
+
+function goToNextModule(){
+  const modules = sampleModules[currentClient?.name] || [];
+  const progress = (currentLearner && currentLearner.progress) || {};
+  const next = modules.find(m=>!(progress[m.id] && progress[m.id].done));
+  if(next){ activeLearnerModuleId = next.id; }
+  renderLearnerNav();
+  renderActiveLearnerModule();
 }
 
 function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestionDone){
@@ -1034,6 +1100,11 @@ function renderActiveLearnerModule(){
   const mod = modules.find(m=>m.id===activeLearnerModuleId);
   const container = document.getElementById('learnerQuizList');
   const flashEl = document.getElementById('learnerModuleFlashcards');
+  const completeBtn = document.getElementById('completeBtn');
+  const nextBtn = document.getElementById('nextModuleBtn');
+  const gateHint = document.getElementById('gateHint');
+  completeBtn.onclick = markModuleComplete;
+  nextBtn.onclick = goToNextModule;
 
   if(!mod){
     document.getElementById('pageEyebrow').textContent = 'Module';
@@ -1041,6 +1112,9 @@ function renderActiveLearnerModule(){
     document.getElementById('pageCrumb').textContent = '—';
     container.innerHTML = `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">Check back once your training administrator publishes content here.</p></div>`;
     flashEl.innerHTML = '';
+    completeBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    gateHint.textContent = '';
     return;
   }
 
@@ -1053,12 +1127,17 @@ function renderActiveLearnerModule(){
   container.innerHTML = '';
   const answered = new Set();
   currentModuleScore = { correct: 0, total: 0 };
-  let autoCompleteTriggered = false;
+
+  const nextIncompleteModule = modules.find(m=>{
+    const p = currentLearner && currentLearner.progress && currentLearner.progress[m.id];
+    return !(p && p.done);
+  });
+  const hasNext = !!nextIncompleteModule;
 
   if(!alreadyDone && questions.length>0){
     const note = document.createElement('div');
     note.className = 'scored-note';
-    note.innerHTML = '⏱️ <span>This section is scored — you get one attempt per question, and it\'s recorded automatically once you finish.</span>';
+    note.innerHTML = '⏱️ <span>This section is scored — you get one attempt per question, which is recorded once you mark it complete.</span>';
     container.appendChild(note);
   }
 
@@ -1071,16 +1150,30 @@ function renderActiveLearnerModule(){
   }
 
   function checkAllAnswered(){
-    if(alreadyDone || autoCompleteTriggered) return;
+    if(alreadyDone) return;
     if(questions.length===0 || answered.size >= questions.length){
-      autoCompleteTriggered = true;
-      autoCompleteModule();
+      completeBtn.disabled = false;
+      gateHint.textContent = '';
+    } else {
+      completeBtn.disabled = true;
+      gateHint.textContent = `Answer the question${questions.length>1?'s':''} above to continue (${answered.size}/${questions.length})`;
     }
+  }
+
+  if(alreadyDone){
+    completeBtn.style.display = 'none';
+    nextBtn.style.display = hasNext ? '' : 'none';
+    nextBtn.textContent = 'Next module →';
+    gateHint.textContent = hasNext ? '' : "You've reached the end — nice work!";
+  } else {
+    completeBtn.style.display = '';
+    completeBtn.textContent = 'Mark module complete';
+    nextBtn.style.display = 'none';
+    checkAllAnswered();
   }
 
   if(questions.length===0){
     container.innerHTML += `<div class="quiz"><p style="color:var(--ink-faint);font-style:italic;margin:0">No questions published yet for this section.</p></div>`;
-    if(!alreadyDone) checkAllAnswered();
   } else {
     questions.forEach((q,qi)=>{
       const block = document.createElement('div');
@@ -1165,6 +1258,55 @@ function renderGlossary(){
   });
 }
 
+function renderAnswerKeyQuestion(container, q, qi){
+  const block = document.createElement('div');
+  block.className = 'quiz';
+  container.appendChild(block);
+
+  if(q.type==='hotspot'){
+    renderHotspotSlides(block, q, qi, true, ()=>{}, ()=>{});
+  } else {
+    const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}" disabled><span class="dot"></span> ${escapeHtml(opt)}</button>`).join('');
+    block.innerHTML = `
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      <div class="qopts-ak${qi}">${opts}</div>
+      <div class="explain show">
+        <span class="tag">Correct</span>
+        <p>${escapeHtml(q.explanation)}</p>
+        ${q.explanationImage ? `<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>` : ''}
+      </div>`;
+    const correctBtn = block.querySelector(`.qopts-ak${qi} .opt[data-correct="true"]`);
+    if(correctBtn) correctBtn.classList.add('correct');
+  }
+}
+
+async function loadAnswerKey(client){
+  document.getElementById('caAkClientName').textContent = client.name;
+  const container = document.getElementById('answerKeyList');
+  container.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">Loading…</p>`;
+
+  const modules = await fetchModulesForClient(client);
+  container.innerHTML = '';
+  if(modules.length===0){
+    container.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">No content published yet.</p>`;
+    return;
+  }
+
+  modules.forEach((mod, mi)=>{
+    const section = document.createElement('div');
+    section.style.marginBottom = '34px';
+    section.innerHTML = `<h2 style="font-size:17px;margin-bottom:14px">${escapeHtml(mod.title)}</h2>`;
+    container.appendChild(section);
+
+    const questions = (mod.questions||[]).filter(q=>q.published);
+    if(questions.length===0){
+      section.innerHTML += `<p style="color:var(--ink-faint);font-style:italic">No published questions in this section.</p>`;
+      return;
+    }
+    questions.forEach((q,qi)=>renderAnswerKeyQuestion(section, q, `${mi}-${qi}`));
+  });
+}
+
 document.getElementById('glossBtn').addEventListener('click', ()=>{
   renderGlossary();
   document.getElementById('glossOverlay').classList.add('show');
@@ -1199,11 +1341,33 @@ function showAdminTab(name){
   const map = {progress:'screenProgress', clients:'screenClients', archived:'screenArchived', quizzes:'screenQuizzes'};
   document.getElementById(map[name]).classList.add('active');
   if(name==='clients') renderClientCards();
-  if(name==='archived') renderArchivedCards();
+  if(name==='archived'){ renderArchivedCards(); loadArchivedLearners(); }
   if(name==='progress') loadProgressDashboard();
 }
 document.querySelectorAll('.admin-tab').forEach(t=>{
   t.addEventListener('click', ()=> showAdminTab(t.dataset.tab));
+});
+document.getElementById('bannerRefreshBtn').addEventListener('click', ()=>{
+  const current = document.querySelector('.admin-tab.active');
+  if(current) showAdminTab(current.dataset.tab);
+});
+
+function showClientAdminTab(name){
+  document.querySelectorAll('.ca-tab').forEach(t=>t.classList.toggle('active', t.dataset.caTab===name));
+  document.querySelectorAll('.ca-screen').forEach(s=>s.classList.remove('active'));
+  const map = { dashboard:'caScreenDashboard', answerkey:'caScreenAnswerKey', archived:'caScreenArchived' };
+  document.getElementById(map[name]).classList.add('active');
+  if(!currentClientAdminClient) return;
+  if(name==='dashboard') loadClientAdminDashboard(currentClientAdminClient);
+  if(name==='answerkey') loadAnswerKey(currentClientAdminClient);
+  if(name==='archived') loadCaArchivedLearners(currentClientAdminClient);
+}
+document.querySelectorAll('.ca-tab').forEach(t=>{
+  t.addEventListener('click', ()=> showClientAdminTab(t.dataset.caTab));
+});
+document.getElementById('clientAdminRefreshBtn').addEventListener('click', ()=>{
+  const current = document.querySelector('.ca-tab.active');
+  if(current) showClientAdminTab(current.dataset.caTab);
 });
 
 /* ---- generic confirmation modal ---- */
@@ -1255,7 +1419,7 @@ async function loadProgressDashboard(){
 
   const [{ data: clientRows, error: cErr }, { data: learnerRows, error: lErr }] = await Promise.all([
     sb.from('clients').select('*').eq('archived', false).order('name'),
-    sb.from('learners').select('*')
+    sb.from('learners').select('*').eq('archived', false)
   ]);
 
   if(cErr || lErr){
@@ -1363,27 +1527,53 @@ function handleDashboardRowMenuClick(e){
   }
 }
 
+function refreshWhicheverDashboardIsActive(){
+  if(document.getElementById('adminView').classList.contains('active')) loadProgressDashboard();
+  if(document.getElementById('clientAdminView').classList.contains('active')) loadClientAdminDashboard(currentClientAdminClient);
+}
+
 document.getElementById('floatingRowMenu').addEventListener('click', async (e)=>{
-  if(!e.target.closest('[data-role="resetprogress"]')) return;
   const menu = document.getElementById('floatingRowMenu');
   const learnerId = menu.dataset.learnerId;
   const learnerName = menu.dataset.learnerName;
-  menu.style.display = 'none';
-  openModal({
-    title:`Reset ${learnerName}'s progress?`,
-    body:`They'll need to redo every section from scratch, and their current score will be cleared. This can't be undone.`,
-    danger:true, confirmText:'Reset progress',
-    onConfirm: async ()=>{
-      const { error } = await sb.rpc('admin_reset_learner_progress', { p_learner_id: learnerId });
-      if(error){
-        console.error('Reset failed:', error);
-        openModal({ title:'Reset failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
-        return;
+
+  if(e.target.closest('[data-role="resetprogress"]')){
+    menu.style.display = 'none';
+    openModal({
+      title:`Reset ${learnerName}'s progress?`,
+      body:`They'll need to redo every section from scratch, and their current score will be cleared. This can't be undone.`,
+      danger:true, confirmText:'Reset progress',
+      onConfirm: async ()=>{
+        const { error } = await sb.rpc('admin_reset_learner_progress', { p_learner_id: learnerId });
+        if(error){
+          console.error('Reset failed:', error);
+          openModal({ title:'Reset failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
+          return;
+        }
+        refreshWhicheverDashboardIsActive();
       }
-      if(document.getElementById('adminView').classList.contains('active')) loadProgressDashboard();
-      if(document.getElementById('clientAdminView').classList.contains('active')) loadClientAdminDashboard(currentClientAdminClient);
-    }
-  });
+    });
+    return;
+  }
+
+  if(e.target.closest('[data-role="archivelearner"]')){
+    menu.style.display = 'none';
+    openModal({
+      title:`Archive ${learnerName}?`,
+      body:`They'll disappear from this dashboard's main list — handy for duplicate sign-ups. Nothing is deleted, and you can restore them anytime from the Archived tab.`,
+      confirmText:'Archive user',
+      onConfirm: async ()=>{
+        const { error } = await sb.from('learners').update({ archived:true }).eq('id', learnerId);
+        if(error){
+          console.error('Archive failed:', error);
+          openModal({ title:'Archive failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
+          return;
+        }
+        refreshWhicheverDashboardIsActive();
+      }
+    });
+    return;
+  }
 });
 document.getElementById('progressDashboard').addEventListener('click', handleDashboardRowMenuClick);
 document.getElementById('clientAdminDashboard').addEventListener('click', handleDashboardRowMenuClick);
@@ -1409,16 +1599,36 @@ async function loadActivityLog(){
     el.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">No admin actions recorded yet.</p>`;
     return;
   }
+  const isBannerAdmin = document.getElementById('adminView').classList.contains('active');
   el.innerHTML = `<table class="admin-table">
-    <tr><th>When</th><th>Admin</th><th>Action</th><th>Learner</th></tr>
+    <tr><th>When</th><th>Admin</th><th>Action</th><th>Learner</th>${isBannerAdmin?'<th></th>':''}</tr>
     ${data.map(row=>`<tr>
       <td>${new Date(row.created_at).toLocaleString()}</td>
       <td>${escapeHtml(row.actor_email)}</td>
       <td>${row.action==='reset_progress' ? 'Reset progress' : escapeHtml(row.action)}</td>
       <td>${escapeHtml(row.target_learner_email)||'—'}</td>
+      ${isBannerAdmin ? `<td class="actions-cell" style="text-align:right"><button type="button" class="row-more-btn" data-role="deletelogentry" data-log-id="${row.id}" title="Delete this entry">✕</button></td>` : ''}
     </tr>`).join('')}
   </table>`;
 }
+document.getElementById('activityLogList').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-role="deletelogentry"]');
+  if(!btn) return;
+  openModal({
+    title:'Delete this log entry?',
+    body:'This permanently removes it from the activity log. This can\'t be undone.',
+    danger:true, confirmText:'Delete entry',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('admin_action_log').delete().eq('id', btn.dataset.logId);
+      if(error){
+        console.error('Delete log entry failed:', error);
+        openModal({ title:'Delete failed', body:'Something went wrong: '+error.message, confirmText:'OK', onConfirm:()=>{} });
+        return;
+      }
+      loadActivityLog();
+    }
+  });
+});
 document.getElementById('bannerActivityLogBtn').addEventListener('click', ()=>{
   loadActivityLog();
   document.getElementById('activityLogOverlay').classList.add('show');
@@ -1672,6 +1882,7 @@ document.getElementById('adminGateForm').addEventListener('submit', async e=>{
     }
     document.getElementById('adminGateScreen').style.display='none';
     document.getElementById('adminView').classList.add('active');
+    document.getElementById('bannerSbEmail').textContent = email;
     loadProgressDashboard();
   } finally {
     submitBtn.disabled = false;
@@ -1737,7 +1948,7 @@ async function loadClientAdminDashboard(client){
     </div>
     <span class="skel-block" style="width:100%;height:160px;margin-top:20px;border-radius:12px"></span>`;
 
-  const { data: learnerRows, error } = await sb.from('learners').select('*').eq('client_id', client.dbId);
+  const { data: learnerRows, error } = await sb.from('learners').select('*').eq('client_id', client.dbId).eq('archived', false);
   if(error){
     console.error('Client admin dashboard load failed:', error);
     container.innerHTML = `<p style="color:var(--coral-deep)">Couldn't load participation data — check the browser console for details.</p>`;
@@ -1786,6 +1997,7 @@ async function bootstrapRoute(){
       if(adminRow){
         document.getElementById('signinScreen').style.display='none';
         document.getElementById('adminView').classList.add('active');
+        document.getElementById('bannerSbEmail').textContent = session.user.email;
         loadProgressDashboard();
         return;
       }
@@ -1901,6 +2113,71 @@ function renderArchivedCards(){
     : `<p style="color:var(--ink-faint);font-size:14px">Nothing archived right now.</p>`;
 }
 renderClientCards();
+
+function archivedLearnerRowTemplate(l, showClientCol, clientName){
+  return `<tr>
+    <td>${escapeHtml(l.name)||'—'}</td>
+    <td>${escapeHtml(l.email)}</td>
+    ${showClientCol ? `<td>${escapeHtml(clientName)||'—'}</td>` : ''}
+    <td class="actions-cell" style="text-align:right">
+      <button type="button" class="row-more-btn" data-role="restorelearner" data-learner-id="${l.id}" style="width:auto;padding:5px 12px;font-size:12.5px;color:var(--teal);font-weight:600">↺ Restore</button>
+    </td>
+  </tr>`;
+}
+
+async function loadArchivedLearners(){
+  const container = document.getElementById('archivedLearnersList');
+  container.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">Loading…</p>`;
+  const [{ data: learnerRows, error: lErr }, { data: clientRows, error: cErr }] = await Promise.all([
+    sb.from('learners').select('*').eq('archived', true),
+    sb.from('clients').select('id,name')
+  ]);
+  if(lErr || cErr){
+    console.error('Archived learners load failed:', lErr, cErr);
+    container.innerHTML = `<p style="color:var(--coral-deep)">Couldn't load archived learners.</p>`;
+    return;
+  }
+  if(!learnerRows || learnerRows.length===0){
+    container.innerHTML = `<p style="color:var(--ink-faint);font-size:14px">No archived learners right now.</p>`;
+    return;
+  }
+  const clientNameById = {};
+  (clientRows||[]).forEach(c=>{ clientNameById[c.id] = c.name; });
+  container.innerHTML = `<table class="admin-table">
+    <tr><th>Name</th><th>Email</th><th>Client</th><th></th></tr>
+    ${learnerRows.map(l=>archivedLearnerRowTemplate(l, true, clientNameById[l.client_id])).join('')}
+  </table>`;
+}
+
+async function loadCaArchivedLearners(client){
+  const container = document.getElementById('caArchivedList');
+  container.innerHTML = `<p style="color:var(--ink-faint);font-style:italic">Loading…</p>`;
+  const { data: learnerRows, error } = await sb.from('learners').select('*').eq('client_id', client.dbId).eq('archived', true);
+  if(error){
+    console.error('Archived learners load failed:', error);
+    container.innerHTML = `<p style="color:var(--coral-deep)">Couldn't load archived learners.</p>`;
+    return;
+  }
+  if(!learnerRows || learnerRows.length===0){
+    container.innerHTML = `<p style="color:var(--ink-faint);font-size:14px">No archived learners right now.</p>`;
+    return;
+  }
+  container.innerHTML = `<table class="admin-table">
+    <tr><th>Name</th><th>Email</th><th></th></tr>
+    ${learnerRows.map(l=>archivedLearnerRowTemplate(l, false)).join('')}
+  </table>`;
+}
+
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-role="restorelearner"]');
+  if(!btn) return;
+  const learnerId = btn.dataset.learnerId;
+  btn.disabled = true;
+  const { error } = await sb.from('learners').update({ archived:false }).eq('id', learnerId);
+  if(error){ console.error('Restore learner failed:', error); btn.disabled = false; return; }
+  if(document.getElementById('adminView').classList.contains('active')) loadArchivedLearners();
+  if(document.getElementById('clientAdminView').classList.contains('active')) loadCaArchivedLearners(currentClientAdminClient);
+});
 
 /* ---- client card actions (delegated) ---- */
 document.getElementById('clientCardsList').addEventListener('click', (e)=>{
