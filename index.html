@@ -1241,13 +1241,9 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
     const firstScored = results.findIndex(r=>r===true||r===false);
     if(firstScored>=0) showStep(firstScored);
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn-next';
-    btn.style.marginTop = '16px';
-    btn.textContent = 'Continue';
-    block.appendChild(btn);
-    btn.addEventListener('click', ()=> onQuestionDone());
+    // fully automatic — the explanation/notes appear right alongside the score,
+    // no click needed to reveal them or to mark this question as answered
+    onQuestionDone();
   }
 
   renderSlide();
