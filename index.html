@@ -112,7 +112,6 @@ main{min-width:0}
 .hs-complete-badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:6px 13px;border-radius:99px;margin-bottom:12px;animation:hscompletepop .4s ease}
 .hs-complete-badge.badge-correct{background:#fff;color:#1F5C3D}
 .hs-complete-badge.badge-wrong{background:#fff;color:var(--coral-deep)}
-.hs-complete-badge.badge-neutral{background:#fff;color:var(--ink-soft)}
 @keyframes hscompletepop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
 .quiz .qtext{font-size:18px;font-weight:600;margin-bottom:18px;line-height:1.4}
 .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:9px;font-size:15px;font-weight:500;color:var(--ink);transition:all .12s}
@@ -1226,13 +1225,12 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       return `<button type="button" class="hs-step-chip ${ok?'ok':'bad'}" data-role="hsReviewStep" data-idx="${i}">${i+1} ${ok?'✓':'✕'}</button>`;
     }).join('');
 
-    const ratio = scored.length ? correctCount/scored.length : 0.5;
+    const ratio = scored.length ? correctCount/scored.length : 1;
     applyQuizResultTint(block, ratio);
-    const badgeClass = ratio>0.5 ? 'badge-correct' : (ratio<0.5 ? 'badge-wrong' : 'badge-neutral');
-    const badgeText = ratio>0.5 ? '✓ Mostly correct' : (ratio<0.5 ? 'Worth a second look' : 'Mixed results');
+    const badgeClass = ratio<=0.4 ? 'badge-wrong' : 'badge-correct';
     block.innerHTML = `
       <div class="qtext">${escapeHtml(q.question)}</div>
-      <div class="hs-complete-badge ${badgeClass}">${badgeText}</div>
+      <div class="hs-complete-badge ${badgeClass}">✓ Section complete</div>
       ${scored.length ? `<div class="hs-summary-score">${correctCount} of ${scored.length} steps correct</div>` : ''}
       ${chips ? `<div class="hs-step-chips">${chips}</div>` : ''}
       <div id="hsReviewSlot"></div>
@@ -1660,11 +1658,11 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 // Without this, a plain " (or <, >, &) typed into a question, answer,
 // term, or tab name can break the surrounding markup — which is exactly
 // what silently truncated your answer text and swallowed content after it.
-// ratio = fraction correct (0..1). >0.5 → green/correct, <0.5 → red/wrong, exactly 0.5 → neutral (no strong claim either way).
+// ratio = fraction correct (0..1). Red only once wrong answers are a clear majority (60%+); green otherwise.
 function applyQuizResultTint(block, ratio){
   block.classList.remove('q-correct','q-wrong');
-  if(ratio > 0.5) block.classList.add('q-correct');
-  else if(ratio < 0.5) block.classList.add('q-wrong');
+  if(ratio <= 0.4) block.classList.add('q-wrong');
+  else block.classList.add('q-correct');
 }
 
 function escapeHtml(str){
