@@ -964,6 +964,7 @@ wireMobileSidebar('caSidebar','caSidebarBackdrop','caMenuBtn','caSidebarCloseBtn
 
 let currentLearner = null;
 let activeLearnerModuleId = null;
+let lastRenderedModuleId = null;   // lets us jump to the top only when the learner moves to a DIFFERENT module
 let currentClientAdminClient = null;
 let currentModuleScore = { correct: 0, total: 0 }; // tallied fresh each time the active module renders
 
@@ -1356,6 +1357,14 @@ function renderActiveLearnerModule(){
   document.getElementById('pageEyebrow').textContent = 'Module';
   document.getElementById('pageTitle').textContent = mod.title;
   document.getElementById('pageCrumb').textContent = mod.title;
+
+  // A different module starts at the top. Re-drawing the SAME module (e.g. after "Mark module complete")
+  // leaves the scroll alone. 'instant' overrides the page's smooth-scroll setting, so it jumps like a
+  // normal page load instead of gliding up past the new content.
+  if(mod.id !== lastRenderedModuleId){
+    lastRenderedModuleId = mod.id;
+    window.scrollTo({ top:0, left:0, behavior:'instant' });
+  }
 
   const alreadyDone = !!(currentLearner && currentLearner.progress && currentLearner.progress[mod.id] && currentLearner.progress[mod.id].done);
   const questions = (mod.questions||[]).filter(q=>q.published);
