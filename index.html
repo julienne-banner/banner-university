@@ -117,11 +117,18 @@ main{min-width:0}
 .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:9px;font-size:15px;font-weight:500;color:var(--ink);transition:all .12s}
 .opt:hover:not(:disabled){border-color:var(--coral);background:#fff}
 .opt .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--ink-faint);flex-shrink:0}
-.opt.correct{background:var(--success-soft);border-color:var(--success);color:#1F5C3D}
-.opt.correct .dot{background:var(--success);border-color:var(--success)}
-.opt.wrong{background:#FBEAE7;border-color:var(--coral);color:var(--coral-deep)}
+/* Once answered there is a clear order of emphasis: the CORRECT option is the star (solid fill),
+   the learner's own wrong pick is clearly marked but secondary (outline), and everything else recedes.
+   The card behind is tinted green/red, so a tinted option would just vanish into it. */
+.opt.correct{background:#27794E;border-color:#27794E;color:#fff;font-weight:600}
+.opt.correct .dot{background:#fff;border-color:#fff}
+.opt.correct::after{content:'✓';margin-left:auto;font-size:16px;font-weight:700}
+.opt.wrong{background:#fff;border-color:var(--coral);box-shadow:0 0 0 1px var(--coral);color:var(--coral-deep)}
 .opt.wrong .dot{background:var(--coral);border-color:var(--coral)}
+.opt.wrong::after{content:'✕';margin-left:auto;font-size:14px;font-weight:700}
 .opt:disabled{cursor:default}
+.opt:disabled:not(.correct):not(.wrong){background:transparent;border-color:rgba(27,36,48,.12);color:var(--ink-soft)}
+.opt:disabled:not(.correct):not(.wrong) .dot{border-color:rgba(27,36,48,.28)}
 .explain{display:none;margin-top:16px;padding-top:18px;border-top:1px dashed var(--line)}
 .explain.show{display:block;animation:fadein .25s ease}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -402,6 +409,11 @@ main{min-width:0}
 .hs-zoom-viewport.hs-zoom-full .hs-zoom-inner{max-height:none;flex:1}
 .hs-zoom-backdrop{display:none;position:fixed;inset:0;background:rgba(27,36,48,.6);z-index:290}
 .hs-zoom-backdrop.show{display:block}
+/* step label + progress bar + feedback live INSIDE the zoom panel, so they come along into the big view */
+.hs-zoom-controls .hs-step-indicator{margin:0 auto 0 2px;align-self:center}
+.hs-zoom-foot{margin-top:12px}
+.hs-zoom-viewport.hs-zoom-full .hs-zoom-foot{flex:none}
+.hs-zoom-viewport.hs-zoom-full .hs-step-indicator{font-size:13px;padding:4px 12px}
 
 /* ---------- scored-assessment warning screen ---------- */
 .score-pill{display:inline-block;font-size:12.5px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:4px 11px;border-radius:99px;margin-bottom:14px}
@@ -1116,12 +1128,16 @@ function hsStepBarHtml(current, total){
   return `<div class="hs-prog" role="progressbar" aria-label="Step ${current+1} of ${total}" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${current+1}">${segs}</div>`;
 }
 
-const HS_ZOOM_OPEN = `<div class="hs-zoom-viewport"><div class="hs-zoom-controls">
+// leftHtml (optional) sits to the LEFT of the zoom buttons — used for the "Step 2 of 3" label
+function hsZoomOpen(leftHtml){
+  return `<div class="hs-zoom-viewport"><div class="hs-zoom-controls">${leftHtml||''}
   <button type="button" class="hs-zoom-btn" data-role="hsZoomOut" title="Zoom out">−</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomReset" title="Reset zoom">⟲</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomIn" title="Zoom in">+</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomFull" title="Full view">⛶</button>
 </div><div class="hs-zoom-inner">`;
+}
+const HS_ZOOM_OPEN = hsZoomOpen('');
 const HS_ZOOM_CLOSE = `</div></div>`;
 
 document.getElementById('hsZoomBackdrop').addEventListener('click', hsExitFullview);
@@ -1129,13 +1145,21 @@ document.addEventListener('keydown', (e)=>{
   if(e.key==='Escape') hsExitFullview();
 });
 
+function hsEnterFullview(viewport){
+  document.querySelectorAll('.hs-zoom-viewport.hs-zoom-full').forEach(v=>{
+    if(v!==viewport){ v.classList.remove('hs-zoom-full'); if(v._hsResetZoom) v._hsResetZoom(); }
+  });
+  viewport.classList.add('hs-zoom-full');
+  document.getElementById('hsZoomBackdrop').classList.add('show');
+}
+function hsHideBackdrop(){ document.getElementById('hsZoomBackdrop').classList.remove('show'); }
 function hsExitFullview(){
   const full = document.querySelector('.hs-zoom-viewport.hs-zoom-full');
   if(full){
     full.classList.remove('hs-zoom-full');
     if(full._hsResetZoom) full._hsResetZoom();
   }
-  document.getElementById('hsZoomBackdrop').classList.remove('show');
+  hsHideBackdrop();
 }
 
 function wireHsZoom(viewport){
@@ -1161,14 +1185,8 @@ function wireHsZoom(viewport){
   if(zout) zout.addEventListener('click', ()=>{ scale=Math.max(1, scale-0.3); apply(); });
   if(zreset) zreset.addEventListener('click', ()=>{ scale=1; apply(); });
   if(zfull) zfull.addEventListener('click', ()=>{
-    const goingFull = !viewport.classList.contains('hs-zoom-full');
-    if(goingFull){
-      document.querySelectorAll('.hs-zoom-viewport.hs-zoom-full').forEach(v=>{ if(v!==viewport){ v.classList.remove('hs-zoom-full'); if(v._hsResetZoom) v._hsResetZoom(); } });
-      viewport.classList.add('hs-zoom-full');
-      document.getElementById('hsZoomBackdrop').classList.add('show');
-    } else {
-      hsExitFullview();
-    }
+    if(viewport.classList.contains('hs-zoom-full')) hsExitFullview();
+    else hsEnterFullview(viewport);
   });
 }
 
@@ -1231,33 +1249,59 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
   }
 
   // ---------- fresh attempt: auto-advance, timed reveal, then a review summary ----------
-  function fadeTo(renderFn){
-    block.style.transition = 'opacity .22s ease';
-    block.style.opacity = '0';
-    setTimeout(()=>{ renderFn(); block.style.opacity = '1'; }, 200);
+  // true while the learner is working through the steps in the big view, so the next step opens big too
+  let wantFull = false;
+  function fadeTo(renderFn, leavingForSummary){
+    const vp = block.querySelector('.hs-zoom-viewport');
+    if(vp) wantFull = vp.classList.contains('hs-zoom-full');   // (a step with no image has no panel — keep what we had)
+    if(leavingForSummary && wantFull){ hsExitFullview(); wantFull = false; }   // the summary lives in the card, so close the big view first
+    const fullVp = wantFull ? block.querySelector('.hs-zoom-viewport.hs-zoom-full') : null;
+    // In the big view only the PANEL fades: fading the whole card would drop the panel behind the dark backdrop mid-fade.
+    const fading = fullVp || block;
+    fading.style.transition = 'opacity .22s ease';
+    fading.style.opacity = '0';
+    setTimeout(()=>{
+      renderFn();
+      const nv = block.querySelector('.hs-zoom-viewport.hs-zoom-full');
+      if(nv){
+        block.style.transition = 'none'; block.style.opacity = '1';
+        nv.style.opacity = '0'; void nv.offsetWidth;
+        nv.style.transition = 'opacity .22s ease'; nv.style.opacity = '1';
+      } else {
+        block.style.transition = 'opacity .22s ease'; block.style.opacity = '1';
+      }
+    }, 200);
   }
   function advance(){
     idx++;
-    if(idx>=slides.length){ fadeTo(renderSummary); return; }
-    fadeTo(renderSlide);
+    if(idx>=slides.length){ fadeTo(renderSummary, true); return; }
+    fadeTo(renderSlide, false);
   }
 
   function renderSlide(){
     const slide = slides[idx];
+    const multi = slides.length>1;
+    const stepPill = multi ? `<span class="hs-step-indicator">Step ${idx+1} of ${slides.length}</span>` : '';
+    const stepBar = multi ? hsStepBarHtml(idx, slides.length) : '';
+    const note = `<div class="hs-slide-note" id="hsSlideNote${qi}"></div>`;
     block.innerHTML = `
       <div class="qtext">${escapeHtml(q.question)}</div>
-      ${slides.length>1 ? `<div class="hs-step-indicator">Step ${idx+1} of ${slides.length}</div>` : ''}
       ${slide.image
-        ? `<div style="margin-bottom:14px">${HS_ZOOM_OPEN}<div class="hs-imgwrap" id="hsSlideWrap${qi}"><img src="${escapeHtml(slide.image)}"></div>${HS_ZOOM_CLOSE}</div>`
-        : `<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>`}
-      ${slides.length>1 ? hsStepBarHtml(idx, slides.length) : ''}
-      <div class="hs-slide-note" id="hsSlideNote${qi}"></div>
+        ? `${hsZoomOpen(stepPill)}<div class="hs-imgwrap" id="hsSlideWrap${qi}"><img src="${escapeHtml(slide.image)}"></div></div><div class="hs-zoom-foot">${stepBar}${note}</div></div>`
+        : `${multi ? `<div style="margin-bottom:10px">${stepPill}</div>` : ''}<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>${stepBar}${note}`}
     `;
 
-    if(!slide.image){ results[idx] = null; setTimeout(advance, 400); return; }
+    if(!slide.image){
+      results[idx] = null;
+      if(wantFull) hsHideBackdrop();   // nothing to show in the big view for this step — don't leave a bare dark screen behind
+      setTimeout(advance, 400);
+      return;
+    }
 
     const wrap = block.querySelector(`#hsSlideWrap${qi}`);
-    wireHsZoom(block.querySelector('.hs-zoom-viewport'));
+    const vp = block.querySelector('.hs-zoom-viewport');
+    wireHsZoom(vp);
+    if(wantFull) hsEnterFullview(vp);   // keep working in the big view from one step to the next
     const built = buildRegionsOnto(wrap, slide, { interactive:true, revealCorrect:false });
 
     built.forEach(({r,el,badge})=>{
