@@ -80,6 +80,10 @@ h1,h2,h3,h4{font-family:var(--display);color:var(--ink);letter-spacing:-.01em}
 .sb-progress .toprow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;font-weight:500}
 .sb-progress .bar{height:7px;background:var(--line-soft);border-radius:99px;overflow:hidden}
 .sb-progress .bar>div{height:100%;background:var(--coral);border-radius:99px;transition:width .4s ease}
+.sb-score{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.sb-score .srow{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ink-soft);font-weight:500}
+.sb-score strong{font-size:20px;font-weight:800;color:var(--teal)}
+.sb-score .sdetail{font-size:12px;color:var(--ink-faint);margin-top:2px;text-align:right}
 .sb-nav{padding:10px 12px;flex:1}
 .sb-nav .navlabel{font-size:11.5px;color:var(--ink-faint);font-weight:600;padding:10px 10px 6px;text-transform:none}
 .navitem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;color:var(--ink-soft);padding:10px 11px;border-radius:0 8px 8px 0;font-size:14.5px;font-weight:500;margin-bottom:1px}
@@ -427,6 +431,12 @@ main{min-width:0}
 @keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(90vh) rotate(360deg);opacity:.15}}
 .celebration-modal{text-align:center;position:relative;z-index:2}
 .celebration-emoji{font-size:46px;margin-bottom:6px}
+.overall-score .lbl{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);margin-top:4px}
+.overall-score .big{font-size:56px;font-weight:800;line-height:1.05;color:var(--teal);margin:4px 0 2px}
+.overall-score .detail{font-size:14px;color:var(--ink-soft)}
+.overall-breakdown{list-style:none;margin:16px auto 8px;padding:12px 0 0;border-top:1px solid var(--line-soft);max-width:420px;text-align:left}
+.overall-breakdown li{display:flex;justify-content:space-between;gap:14px;padding:5px 0;font-size:14px;color:var(--ink-soft)}
+.overall-breakdown li b{color:var(--ink);font-weight:600;white-space:nowrap}
 
 /* ---------- admin content h1 (both admin views share .admin-wrap) ---------- */
 .ca-screen h1{font-size:24px;margin-bottom:22px}
@@ -736,6 +746,10 @@ main{min-width:0}
     <div class="sb-progress">
       <div class="toprow"><span>Your progress</span><span id="pctLabel">17%</span></div>
       <div class="bar"><div id="pbar" style="width:17%"></div></div>
+      <div class="sb-score" id="sbScore" style="display:none">
+        <div class="srow"><span>Overall score</span><strong id="sbScoreVal">—</strong></div>
+        <div class="sdetail" id="sbScoreDetail"></div>
+      </div>
     </div>
     <nav class="sb-nav" id="sbNav">
       <div class="navlabel">Contents</div>
@@ -899,6 +913,7 @@ main{min-width:0}
     <div class="celebration-emoji" id="celebrationEmoji">🎉</div>
     <h2 id="celebrationTitle">Nice work!</h2>
     <p class="sub" id="celebrationScoreText">You scored 92% on this section.</p>
+    <div class="overall-score" id="celebrationOverall" style="display:none"></div>
     <button type="button" class="btn-primary" id="celebrationContinueBtn" style="margin-top:6px">Continue</button>
   </div>
 </div>
@@ -993,6 +1008,20 @@ function updateProgressChrome(){
   document.getElementById('pctLabel').textContent = pct+'%';
   document.getElementById('pbar').style.width = pct+'%';
   document.getElementById('pagePctLabel').textContent = pct+'% complete';
+
+  // the overall score appears once EVERY module is finished (and there was something to score)
+  const modules = sampleModules[currentClient?.name] || [];
+  const progress = (currentLearner && currentLearner.progress) || {};
+  const allDone = modules.length>0 && modules.every(m=>progress[m.id] && progress[m.id].done);
+  const sc = overallScoreOf(progress);
+  const box = document.getElementById('sbScore');
+  if(allDone && sc.pct!==null){
+    document.getElementById('sbScoreVal').textContent = sc.pct+'%';
+    document.getElementById('sbScoreDetail').textContent = sc.correct+' of '+sc.total+' correct';
+    box.style.display = '';
+  } else {
+    box.style.display = 'none';
+  }
 }
 
 function renderLearnerNav(){
@@ -1046,12 +1075,28 @@ function launchConfetti(){
   }
 }
 
-function showCelebration(scorePct, isCourseComplete, onContinue){
+// finale = { overall:{correct,total,pct}, rows:[{title,correct,total}] } — passed only when the whole course is finished
+function showCelebration(scorePct, isCourseComplete, onContinue, finale){
   document.getElementById('celebrationEmoji').textContent = isCourseComplete ? '🎓' : '🎉';
   document.getElementById('celebrationTitle').textContent = isCourseComplete ? "You've completed the training!" : 'Nice work!';
-  document.getElementById('celebrationScoreText').textContent = isCourseComplete
-    ? `You scored ${scorePct}% on this final section.`
-    : `You scored ${scorePct}% on this section.`;
+  const textEl = document.getElementById('celebrationScoreText');
+  const overallEl = document.getElementById('celebrationOverall');
+  if(isCourseComplete && finale && finale.overall && finale.overall.pct!==null){
+    textEl.style.display = 'none';
+    const rows = (finale.rows||[]).map(r=>
+      `<li><span>${escapeHtml(r.title)}</span><b>${typeof r.total==='number' && r.total>0 ? `${r.correct||0}/${r.total} · ${Math.round((r.correct||0)/r.total*100)}%` : '—'}</b></li>`).join('');
+    overallEl.innerHTML = `<div class="lbl">Your overall score</div><div class="big">${finale.overall.pct}%</div>
+      <div class="detail">${finale.overall.correct} of ${finale.overall.total} correct</div>
+      ${rows ? `<ul class="overall-breakdown">${rows}</ul>` : ''}`;
+    overallEl.style.display = '';
+  } else {
+    overallEl.style.display = 'none';
+    overallEl.innerHTML = '';
+    textEl.style.display = '';
+    textEl.textContent = isCourseComplete
+      ? `You scored ${scorePct}% on this final section.`
+      : `You scored ${scorePct}% on this section.`;
+  }
   const overlay = document.getElementById('celebrationOverlay');
   overlay.classList.add('show');
   launchConfetti();
@@ -1102,9 +1147,13 @@ async function markModuleComplete(){
   currentLearner.progress = progress;
   renderLearnerNav();
 
+  const finale = allComplete ? {
+    overall: overallScoreOf(progress),
+    rows: modules.map(m=>({ title: m.title, correct: (progress[m.id]||{}).correct, total: (progress[m.id]||{}).total }))
+  } : null;
   showCelebration(scorePct, allComplete, ()=>{
     renderActiveLearnerModule();
-  });
+  }, finale);
 }
 
 function goToNextModule(){
@@ -1728,10 +1777,8 @@ async function loadProgressDashboard(){
     return { cls:'inprogress', label:'In progress' };
   }
   function overallScoreFor(l){
-    const progress = l.progress || {};
-    let correct = 0, total = 0;
-    Object.values(progress).forEach(p=>{ if(p && typeof p.total==='number'){ correct += p.correct||0; total += p.total||0; } });
-    return total>0 ? Math.round((correct/total)*100)+'%' : '—';
+    const sc = overallScoreOf(l.progress);
+    return sc.pct===null ? '—' : sc.pct+'%';
   }
 
   const total = learnerRows.length;
@@ -1784,6 +1831,15 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 // Without this, a plain " (or <, >, &) typed into a question, answer,
 // term, or tab name can break the surrounding markup — which is exactly
 // what silently truncated your answer text and swallowed content after it.
+// The ONE definition of "overall score" for the whole app — the learner's own view and both admin dashboards
+// all use it, so the number a learner is shown always matches what their admin sees.
+// Every saved module score added together (total correct out of total questions), then rounded.
+function overallScoreOf(progress){
+  let correct = 0, total = 0;
+  Object.values(progress || {}).forEach(p=>{ if(p && typeof p.total==='number'){ correct += p.correct||0; total += p.total||0; } });
+  return { correct, total, pct: total>0 ? Math.round((correct/total)*100) : null };
+}
+
 // ratio = fraction correct (0..1). Red only once wrong answers are a clear majority (60%+); green otherwise.
 function applyQuizResultTint(block, ratio){
   block.classList.remove('q-correct','q-wrong');
@@ -2361,10 +2417,8 @@ async function loadClientAdminDashboard(client){
     return { cls:'inprogress', label:'In progress' };
   }
   function overallScoreFor(l){
-    const progress = l.progress || {};
-    let correct = 0, total = 0;
-    Object.values(progress).forEach(p=>{ if(p && typeof p.total==='number'){ correct += p.correct||0; total += p.total||0; } });
-    return total>0 ? Math.round((correct/total)*100)+'%' : '—';
+    const sc = overallScoreOf(l.progress);
+    return sc.pct===null ? '—' : sc.pct+'%';
   }
 
   const total = learnerRows.length;
