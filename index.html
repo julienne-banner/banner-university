@@ -429,11 +429,15 @@ main{min-width:0}
 .hs-focus-remove{border:0;text-decoration:underline;text-underline-offset:2px;padding:0;margin-top:10px}
 
 /* ---------- hotspot question (learner-facing) ---------- */
-.hs-hotspot{position:absolute;border-radius:6px;border:2.5px solid rgba(245,124,31,.9);background:rgba(245,124,31,.14);cursor:pointer;transition:background .15s ease,border-color .15s ease;animation:hshotspotpulse 2.8s ease-in-out infinite}
-.hs-hotspot:hover{animation:none;background:rgba(245,124,31,.3);border-color:#F57C1F;box-shadow:0 0 0 5px rgba(245,124,31,.35)}
-@keyframes hshotspotpulse{0%,100%{box-shadow:0 0 0 0 rgba(245,124,31,.65)}55%{box-shadow:0 0 0 18px rgba(245,124,31,0)}}
-.hs-hotspot.tried-wrong,.hs-hotspot.is-correct{animation:none}
-@media (prefers-reduced-motion:reduce){.hs-hotspot{animation:none}}
+.hs-hotspot{position:absolute;border-radius:6px;border:2.5px solid rgba(245,124,31,.9);background:rgba(245,124,31,.14);cursor:pointer;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease}
+/* The ripple lives on ::after so hover never has to touch the animation — removing and re-adding it
+   is what used to restart one region out of step with the rest. --pulse-delay pins every region to one shared clock. */
+.hs-hotspot::after{content:'';position:absolute;inset:-2.5px;border-radius:inherit;pointer-events:none;animation:hshotspotpulse 2800ms ease-in-out infinite;animation-delay:var(--pulse-delay,0ms)}
+.hs-hotspot:hover{background:rgba(245,124,31,.3);border-color:#F57C1F;box-shadow:0 0 0 4px rgba(245,124,31,.35)}
+.hs-hotspot:hover::after{opacity:0}
+@keyframes hshotspotpulse{0%,100%{box-shadow:0 0 0 0 rgba(245,124,31,.5)}55%{box-shadow:0 0 0 8px rgba(245,124,31,0)}}
+.hs-hotspot.tried-wrong::after,.hs-hotspot.is-correct::after,.hs-hotspot.no-pulse::after{display:none}
+@media (prefers-reduced-motion:reduce){.hs-hotspot::after{animation:none}}
 .hs-hotspot.tried-wrong{background:rgba(225,80,61,.16);border-color:var(--coral);cursor:not-allowed;pointer-events:none}
 .hs-hotspot.is-correct{background:rgba(47,133,88,.2);border-color:var(--success);pointer-events:none}
 .hs-hotspot.shake{animation:hsshake .4s ease}
@@ -1051,6 +1055,11 @@ function goToNextModule(){
   renderActiveLearnerModule();
 }
 
+// One shared clock for every pulsing region: a negative delay equal to "how far into the cycle we are right now"
+// puts any region — whenever it was created — in the same phase as all the others. Keep in step with the 2800ms in the CSS.
+const HS_PULSE_MS = 2800;
+function hsPulseDelay(){ return '-' + Math.round(performance.now() % HS_PULSE_MS) + 'ms'; }
+
 const HS_ZOOM_OPEN = `<div class="hs-zoom-viewport"><div class="hs-zoom-controls">
   <button type="button" class="hs-zoom-btn" data-role="hsZoomOut" title="Zoom out">−</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomReset" title="Reset zoom">⟲</button>
@@ -1122,6 +1131,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
     return (slide.regions||[]).map(r=>{
       const el = document.createElement('div');
       el.className = 'hs-hotspot';
+      el.style.setProperty('--pulse-delay', hsPulseDelay());
       el.style.left=r.x+'%'; el.style.top=r.y+'%'; el.style.width=r.w+'%'; el.style.height=r.h+'%';
       wrap.appendChild(el);
       const badge = document.createElement('div');
@@ -1130,7 +1140,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       badge.style.top = `calc(${r.y}% - 10px)`;
       wrap.appendChild(badge);
       if(revealCorrect && r.correct){ el.classList.add('is-correct'); badge.classList.add('show','right'); badge.textContent='✓'; }
-      if(!interactive){ el.style.pointerEvents='none'; el.style.animation='none'; }
+      if(!interactive){ el.style.pointerEvents='none'; el.classList.add('no-pulse'); }
       return {r, el, badge};
     });
   }
@@ -1196,7 +1206,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       el.addEventListener('click', ()=>{
         built.forEach(other=>{
           other.el.style.pointerEvents = 'none';
-          other.el.style.animation = 'none';
+          other.el.classList.add('no-pulse');
           if(other.r.correct){ other.el.classList.add('is-correct'); other.badge.classList.add('show','right'); other.badge.textContent='✓'; }
         });
         const noteEl = block.querySelector(`#hsSlideNote${qi}`);
@@ -3120,7 +3130,15 @@ function hsWireWrap(cardEl){
 
 function hsInitCard(cardEl, q){
   const regions = (q && Array.isArray(q.regions)) ? q.regions.map(r=>({...r})) : [];
-  const maxId = regions.reduce((m,r)=>Math.max(m, r.id||0), 0);
+  // Regions are saved WITHOUT ids (the learner never needs them), but the editor identifies regions by id
+  // to know which one you clicked. Give every region a unique numeric id on load — this also repairs
+  // quizzes that were already published before this fix.
+  let maxId = regions.reduce((m,r)=> Number.isFinite(r.id) ? Math.max(m, r.id) : m, 0);
+  const seenIds = new Set();
+  regions.forEach(r=>{
+    if(!Number.isFinite(r.id) || seenIds.has(r.id)) r.id = ++maxId;
+    seenIds.add(r.id);
+  });
   cardEl.hsState = { regions, focusArea: (q && q.focusArea) ? {...q.focusArea} : null, nextId: maxId+1, currentTool:'draw', selectedIds:new Set(), selectedFocus:false };
   hsWireWrap(cardEl);
   hsSetTool(cardEl, 'draw');
