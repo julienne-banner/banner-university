@@ -299,9 +299,9 @@ main{min-width:0}
 .exp-shot-add:hover{border-color:var(--coral);color:var(--coral-deep)}
 
 /* ---------- what learners see ---------- */
-.explain-fig{margin:14px 0 0}
+.explain-fig{margin:18px 0 0;padding:10px 10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .explain-fig .explain-shot{margin:0}
-.explain-fig figcaption{margin-top:8px;font-size:13px;line-height:1.5;color:var(--ink-soft)}
+.explain-fig figcaption{margin:11px 4px 0;padding-top:10px;border-top:1px solid var(--line-soft);font-size:13.5px;line-height:1.5;color:var(--ink)}
 .qcard-include{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13.5px;font-weight:500;color:var(--ink-soft)}
 .qcard-include input{width:16px;height:16px;accent-color:var(--coral)}
 
@@ -371,6 +371,12 @@ main{min-width:0}
 
 /* ---------- multi-step hotspot (learner) ---------- */
 .hs-step-indicator{display:inline-block;font-size:11.5px;font-weight:700;color:var(--teal);background:var(--teal-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+.hs-prog{display:flex;gap:6px;margin:0 0 2px}
+.hs-prog-seg{flex:1;height:5px;border-radius:99px;background:var(--line);position:relative;overflow:hidden}
+.hs-prog-seg.done{background:rgba(31,111,107,.42)}
+.hs-prog-seg.current::after{content:'';position:absolute;inset:0;border-radius:inherit;background:var(--teal);transform-origin:left center;animation:hsprogfill .55s ease-out both}
+@keyframes hsprogfill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.hs-prog-seg.current::after{animation:none}}
 .hs-slide-note{display:none;margin-top:12px;padding:9px 13px;border-radius:8px;font-size:13.5px;font-weight:600}
 .hs-slide-note.show{display:block}
 .hs-slide-note.correct{background:var(--success-soft);color:var(--success)}
@@ -1102,6 +1108,13 @@ function goToNextModule(){
 const HS_PULSE_MS = 2800;
 function hsPulseDelay(){ return '-' + Math.round(performance.now() % HS_PULSE_MS) + 'ms'; }
 
+// thin segmented bar for multi-step questions: finished steps filled softly, the current step highlighted, the rest empty
+function hsStepBarHtml(current, total){
+  const segs = Array.from({length: total}, (_, i)=>
+    `<span class="hs-prog-seg${i<current ? ' done' : (i===current ? ' current' : '')}" title="Step ${i+1}"></span>`).join('');
+  return `<div class="hs-prog" role="progressbar" aria-label="Step ${current+1} of ${total}" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${current+1}">${segs}</div>`;
+}
+
 const HS_ZOOM_OPEN = `<div class="hs-zoom-viewport"><div class="hs-zoom-controls">
   <button type="button" class="hs-zoom-btn" data-role="hsZoomOut" title="Zoom out">−</button>
   <button type="button" class="hs-zoom-btn" data-role="hsZoomReset" title="Reset zoom">⟲</button>
@@ -1236,6 +1249,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
       ${slide.image
         ? `<div style="margin-bottom:14px">${HS_ZOOM_OPEN}<div class="hs-imgwrap" id="hsSlideWrap${qi}"><img src="${escapeHtml(slide.image)}"></div>${HS_ZOOM_CLOSE}</div>`
         : `<p style="color:var(--ink-faint);font-style:italic">This step isn't fully set up yet.</p>`}
+      ${slides.length>1 ? hsStepBarHtml(idx, slides.length) : ''}
       <div class="hs-slide-note" id="hsSlideNote${qi}"></div>
     `;
 
