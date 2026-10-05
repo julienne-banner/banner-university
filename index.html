@@ -398,6 +398,10 @@ main{min-width:0}
 .hs-region.correctpick .hs-num{background:var(--success)}
 .hs-drawing-box{position:absolute;border:2px dashed var(--teal);background:rgba(31,111,107,.1);pointer-events:none}
 .hs-marquee-box{position:absolute;border:1.5px dashed var(--teal);background:rgba(31,111,107,.08);pointer-events:none}
+.hs-guide-v,.hs-guide-h{position:absolute;background:#E1503D;pointer-events:none;z-index:12}
+.hs-guide-v{top:0;bottom:0;width:calc(1.5px / var(--hs-scale,1));margin-left:calc(-0.75px / var(--hs-scale,1))}
+.hs-guide-h{left:0;right:0;height:calc(1.5px / var(--hs-scale,1));margin-top:calc(-0.75px / var(--hs-scale,1))}
+.hs-shortcut-hint{font-size:12px;color:var(--ink-faint);margin:10px 0 0;line-height:1.55}
 .hs-focusbox{position:absolute;border:2.5px dashed #C6821E;background:rgba(198,130,30,.08);border-radius:6px}
 .hs-focusbox .hs-flabel{position:absolute;top:-22px;left:0;font-size:10.5px;font-weight:700;color:#8A5A10;background:#FCEFD8;padding:2px 8px;border-radius:5px;letter-spacing:.02em}
 .hs-focusbox.selected{outline:2px solid var(--coral-deep);outline-offset:2px}
@@ -425,9 +429,9 @@ main{min-width:0}
 .hs-focus-remove{border:0;text-decoration:underline;text-underline-offset:2px;padding:0;margin-top:10px}
 
 /* ---------- hotspot question (learner-facing) ---------- */
-.hs-hotspot{position:absolute;border-radius:6px;border:2px solid rgba(31,111,107,.5);background:rgba(31,111,107,.07);cursor:pointer;transition:background .15s ease,border-color .15s ease;animation:hshotspotpulse 1.8s ease-in-out infinite}
-.hs-hotspot:hover{background:rgba(31,111,107,.2);border-color:rgba(31,111,107,.85)}
-@keyframes hshotspotpulse{0%,100%{box-shadow:0 0 0 0 rgba(31,111,107,.3)}50%{box-shadow:0 0 0 6px rgba(31,111,107,0)}}
+.hs-hotspot{position:absolute;border-radius:6px;border:2.5px solid rgba(245,124,31,.9);background:rgba(245,124,31,.14);cursor:pointer;transition:background .15s ease,border-color .15s ease;animation:hshotspotpulse 2.8s ease-in-out infinite}
+.hs-hotspot:hover{animation:none;background:rgba(245,124,31,.3);border-color:#F57C1F;box-shadow:0 0 0 5px rgba(245,124,31,.35)}
+@keyframes hshotspotpulse{0%,100%{box-shadow:0 0 0 0 rgba(245,124,31,.65)}55%{box-shadow:0 0 0 18px rgba(245,124,31,0)}}
 .hs-hotspot.tried-wrong,.hs-hotspot.is-correct{animation:none}
 @media (prefers-reduced-motion:reduce){.hs-hotspot{animation:none}}
 .hs-hotspot.tried-wrong{background:rgba(225,80,61,.16);border-color:var(--coral);cursor:not-allowed;pointer-events:none}
@@ -1075,7 +1079,7 @@ function wireHsZoom(viewport){
   const target = viewport.querySelector('.hs-imgwrap, .hs-admin-wrap, .explain-shot');
   if(!target) return;
   let scale = 1;
-  function apply(){ target.style.transform = `scale(${scale})`; }
+  function apply(){ target.style.transform = `scale(${scale})`; target.style.setProperty('--hs-scale', scale); }
   viewport._hsResetZoom = ()=>{ scale=1; apply(); };
   viewport.addEventListener('wheel', (e)=>{
     if(!e.ctrlKey) return;
@@ -2629,6 +2633,7 @@ function hotspotCanvasTemplate(slide){
       <button class="hs-tool-btn" data-tool="draw" type="button">▭ Draw region <span class="k">(R)</span></button>
       <button class="hs-tool-btn" data-tool="focus" type="button">🔍 Focus area <span class="k">(F)</span></button>
     </div>
+    <p class="hs-shortcut-hint">Delete removes · Ctrl/⌘+Z undo · Ctrl/⌘+C and Ctrl/⌘+V copy &amp; paste · hold Alt to turn snapping off · Ctrl+scroll to zoom</p>
     <div class="hs-region-list" data-role="hsRegionList"></div>
     <p class="hs-empty-note" data-role="hsEmpty">No regions yet — pick "Draw region," then drag on the image above.</p>
     <button class="hs-clear-btn" type="button" data-role="hsClear">Clear all regions</button>
@@ -2714,6 +2719,20 @@ document.addEventListener('keydown', (e)=>{
     return;
   }
 
+  // copy / paste regions — Ctrl+C / Ctrl+V on Windows, Cmd+C / Cmd+V on Mac
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && !e.altKey){
+    const k = e.key.toLowerCase();
+    if(k==='c'){
+      if(window.getSelection && String(window.getSelection()).length) return; // they're copying real text, leave it alone
+      if(hsCopySelected(hsActiveCard)) e.preventDefault();
+      return;
+    }
+    if(k==='v'){
+      if(hsPaste(hsActiveCard)) e.preventDefault();
+      return;
+    }
+  }
+
   if(e.metaKey||e.ctrlKey||e.altKey) return;
 
   // delete the currently-selected region(s)/focus area
@@ -2782,6 +2801,96 @@ function hsDeleteSelected(cardEl){
   hsRenderAll(cardEl);
 }
 
+/* ---------- snapping, guides & clipboard ----------
+   All geometry below is in PERCENT of the image, never pixels, so CSS zoom can't throw it off. */
+const HS_SNAP_PX = 6;
+let hsClipboard = null;
+
+function hsPointPct(wrap, e){
+  const rect = wrap.getBoundingClientRect(); // visual (zoomed) rect — dividing by it keeps the % correct at any zoom
+  return {
+    x: Math.min(100, Math.max(0, (e.clientX-rect.left)/rect.width*100)),
+    y: Math.min(100, Math.max(0, (e.clientY-rect.top)/rect.height*100)),
+    rect
+  };
+}
+function hsSnapTargets(state, excludeObjs){
+  const ex = new Set(excludeObjs||[]);
+  const xs=[0,50,100], ys=[0,50,100];
+  const add = o=>{ if(!o || ex.has(o)) return; xs.push(o.x, o.x+o.w/2, o.x+o.w); ys.push(o.y, o.y+o.h/2, o.y+o.h); };
+  state.regions.forEach(add);
+  add(state.focusArea);
+  return {xs, ys};
+}
+function hsSnapCoord(v, targets, thr){
+  let best=v, bestD=thr+1e-9, hit=false;
+  for(const t of targets){ const d=Math.abs(t-v); if(d<bestD){ best=t; bestD=d; hit=true; } }
+  return {v:best, hit};
+}
+function hsSnapMoveDelta(box, tg, thrX, thrY){
+  let dx=0, dy=0, gotX=false, gotY=false;
+  [box.x, box.x+box.w/2, box.x+box.w].forEach(e=>tg.xs.forEach(t=>{
+    const d=t-e; if(Math.abs(d)<=thrX && (!gotX || Math.abs(d)<Math.abs(dx))){ dx=d; gotX=true; }
+  }));
+  [box.y, box.y+box.h/2, box.y+box.h].forEach(e=>tg.ys.forEach(t=>{
+    const d=t-e; if(Math.abs(d)<=thrY && (!gotY || Math.abs(d)<Math.abs(dy))){ dy=d; gotY=true; }
+  }));
+  return {dx, dy};
+}
+function hsGuideLines(box, tg){
+  const gx=new Set(), gy=new Set();
+  [box.x, box.x+box.w/2, box.x+box.w].forEach(e=>tg.xs.forEach(t=>{ if(Math.abs(t-e)<0.05) gx.add(t); }));
+  [box.y, box.y+box.h/2, box.y+box.h].forEach(e=>tg.ys.forEach(t=>{ if(Math.abs(t-e)<0.05) gy.add(t); }));
+  return {gx:[...gx], gy:[...gy]};
+}
+function hsClearGuides(wrap){ wrap.querySelectorAll('.hs-guide-v,.hs-guide-h').forEach(el=>el.remove()); }
+function hsDrawGuides(wrap, gx, gy){
+  hsClearGuides(wrap);
+  gx.forEach(x=>{ const el=document.createElement('div'); el.className='hs-guide-v'; el.style.left=x+'%'; wrap.appendChild(el); });
+  gy.forEach(y=>{ const el=document.createElement('div'); el.className='hs-guide-h'; el.style.top=y+'%'; wrap.appendChild(el); });
+}
+
+function hsCopySelected(cardEl){
+  if(!cardEl || !cardEl.hsState) return false;
+  const state = cardEl.hsState;
+  const picked = state.regions.filter(r=>state.selectedIds.has(r.id));
+  if(!picked.length) return false;
+  hsClipboard = {
+    regions: picked.map(r=>({x:r.x, y:r.y, w:r.w, h:r.h})),
+    srcCard: cardEl, srcSlide: cardEl.hsActiveSlideIndex ?? 0,
+    lastCard: null, lastSlide: null, n: 0
+  };
+  return true;
+}
+function hsPaste(cardEl){
+  if(!hsClipboard || !cardEl || !cardEl.hsState) return false;
+  const state = cardEl.hsState;
+  const slideIdx = cardEl.hsActiveSlideIndex ?? 0;
+  const clip = hsClipboard;
+  // each repeat paste in the same spot nudges a little further so copies never stack invisibly
+  if(clip.lastCard!==cardEl || clip.lastSlide!==slideIdx){
+    clip.lastCard = cardEl; clip.lastSlide = slideIdx;
+    clip.n = (clip.srcCard===cardEl && clip.srcSlide===slideIdx) ? 1 : 0;
+  } else { clip.n++; }
+  const off = clip.n*2;
+  hsSnapshotForUndo(cardEl);
+  const newIds = [];
+  clip.regions.forEach(r=>{
+    const nr = {
+      id: state.nextId++,
+      x: Math.max(0, Math.min(r.x+off, 100-r.w)),
+      y: Math.max(0, Math.min(r.y+off, 100-r.h)),
+      w: r.w, h: r.h,
+      correct: state.regions.length===0   // same rule as drawing: an empty slide's first region is the correct one
+    };
+    state.regions.push(nr); newIds.push(nr.id);
+  });
+  hsSetTool(cardEl, 'select');            // switches tool, clears selection, re-renders
+  newIds.forEach(id=>state.selectedIds.add(id));
+  hsRenderAll(cardEl);
+  return true;
+}
+
 function hsAttachHandles(cardEl, container, dataRef){
   const wrap = cardEl.querySelector('[data-role="hsWrap"]');
   ['ne','sw','se'].forEach(corner=>{
@@ -2791,12 +2900,21 @@ function hsAttachHandles(cardEl, container, dataRef){
     h.addEventListener('mousedown', (e)=>{
       e.stopPropagation(); e.preventDefault();
       hsSnapshotForUndo(cardEl);
-      const rect = wrap.getBoundingClientRect();
+      const state = cardEl.hsState;
       const start = {x:dataRef.x, y:dataRef.y, w:dataRef.w, h:dataRef.h};
       const x2 = start.x+start.w, y2 = start.y+start.h;
+      const tg = hsSnapTargets(state, [dataRef]);
       function onMove(ev){
-        const curX = (ev.clientX-rect.left)/rect.width*100;
-        const curY = (ev.clientY-rect.top)/rect.height*100;
+        const p = hsPointPct(wrap, ev);
+        let curX = p.x, curY = p.y;
+        const gx=[], gy=[];
+        if(!ev.altKey){
+          const sx = hsSnapCoord(curX, tg.xs, HS_SNAP_PX/p.rect.width*100);
+          const sy = hsSnapCoord(curY, tg.ys, HS_SNAP_PX/p.rect.height*100);
+          curX = sx.v; curY = sy.v;
+          if(sx.hit) gx.push(sx.v);
+          if(sy.hit) gy.push(sy.v);
+        }
         let x=start.x, y=start.y, w=start.w, hh=start.h;
         if(corner==='se'){ w = curX-start.x; hh = curY-start.y; }
         else if(corner==='ne'){ y = curY; w = curX-start.x; hh = y2-curY; }
@@ -2804,10 +2922,12 @@ function hsAttachHandles(cardEl, container, dataRef){
         if(w<2) w=2; if(hh<2) hh=2;
         dataRef.x=x; dataRef.y=y; dataRef.w=w; dataRef.h=hh;
         hsRenderAll(cardEl);
+        hsDrawGuides(wrap, gx, gy);
       }
       function onUp(){
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        hsClearGuides(wrap);
       }
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
@@ -2865,9 +2985,74 @@ function hsRenderAll(cardEl){
 function hsWireWrap(cardEl){
   const wrap = cardEl.querySelector('[data-role="hsWrap"]');
   const state = cardEl.hsState;
-  let dragging=false, startX, startY, dragEl=null;
+
+  // Draws a rubber-band box (new region / focus area / marquee). Everything is in % of the image,
+  // so it lands in the right place no matter how far the image is zoomed.
+  function beginBoxDrag(kind, startEvt){
+    const rect0 = wrap.getBoundingClientRect();
+    const tg = (kind==='marquee') ? null : hsSnapTargets(state, state.currentTool==='focus' ? [state.focusArea] : []);
+    const thrX = HS_SNAP_PX/rect0.width*100, thrY = HS_SNAP_PX/rect0.height*100;
+    function pointFrom(ev){
+      const p = hsPointPct(wrap, ev);
+      let x=p.x, y=p.y; const gx=[], gy=[];
+      if(tg && !ev.altKey){
+        const sx=hsSnapCoord(x, tg.xs, thrX), sy=hsSnapCoord(y, tg.ys, thrY);
+        x=sx.v; y=sy.v;
+        if(sx.hit) gx.push(sx.v);
+        if(sy.hit) gy.push(sy.v);
+      }
+      return {x,y,gx,gy};
+    }
+    const start = pointFrom(startEvt);
+    let cur = start;
+    const ghost = document.createElement('div');
+    ghost.className = (kind==='marquee') ? 'hs-marquee-box' : 'hs-drawing-box';
+    wrap.appendChild(ghost);
+    function layout(){
+      ghost.style.left = Math.min(start.x,cur.x)+'%';
+      ghost.style.top = Math.min(start.y,cur.y)+'%';
+      ghost.style.width = Math.abs(cur.x-start.x)+'%';
+      ghost.style.height = Math.abs(cur.y-start.y)+'%';
+      if(tg) hsDrawGuides(wrap, [...new Set([...start.gx,...cur.gx])], [...new Set([...start.gy,...cur.gy])]);
+    }
+    layout();
+    function onMove(ev){ cur = pointFrom(ev); layout(); }
+    function onUp(ev){
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      cur = pointFrom(ev);
+      ghost.remove();
+      hsClearGuides(wrap);
+      const rect = wrap.getBoundingClientRect();
+      const box = { x:Math.min(start.x,cur.x), y:Math.min(start.y,cur.y), w:Math.abs(cur.x-start.x), h:Math.abs(cur.y-start.y) };
+      const wPx = box.w/100*rect.width, hPx = box.h/100*rect.height;
+
+      if(kind==='marquee'){
+        state.selectedIds.clear(); state.selectedFocus=false;
+        if(wPx>=6 && hPx>=6){
+          state.regions.forEach(r=>{
+            if(r.x < box.x+box.w && r.x+r.w > box.x && r.y < box.y+box.h && r.y+r.h > box.y) state.selectedIds.add(r.id);
+          });
+        }
+        hsRenderAll(cardEl);
+        return;
+      }
+
+      if(wPx<8 || hPx<8) return;
+      hsSnapshotForUndo(cardEl);
+      if(state.currentTool==='focus'){
+        state.focusArea = box;
+      } else {
+        state.regions.push({ id: state.nextId++, ...box, correct: state.regions.length===0 });
+      }
+      hsRenderAll(cardEl);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
 
   wrap.addEventListener('mousedown', (e)=>{
+    if(e.button!==0) return;
     hsActiveCard = cardEl;
     if(e.target.classList.contains('hs-resize-handle')) return;
 
@@ -2886,89 +3071,50 @@ function hsWireWrap(cardEl){
           hsRenderAll(cardEl);
         }
         hsSnapshotForUndo(cardEl);
+
         const rect = wrap.getBoundingClientRect();
-        const moveStart = {x:e.clientX, y:e.clientY, rectW:rect.width, rectH:rect.height};
-        const moveOrigins = {
-          regions: state.regions.filter(r=>state.selectedIds.has(r.id)).map(r=>({r,x:r.x,y:r.y})),
-          focus: (state.selectedFocus && state.focusArea) ? {x:state.focusArea.x, y:state.focusArea.y} : null
-        };
+        const downX = e.clientX, downY = e.clientY;
+        const movingRegions = state.regions.filter(r=>state.selectedIds.has(r.id));
+        const origins = movingRegions.map(r=>({r, x:r.x, y:r.y}));
+        const focusOrigin = (state.selectedFocus && state.focusArea) ? {x:state.focusArea.x, y:state.focusArea.y} : null;
+        const movingObjs = movingRegions.slice();
+        if(focusOrigin) movingObjs.push(state.focusArea);
+        const tg = hsSnapTargets(state, movingObjs);
+        // bounding box of everything being dragged — its edges/center are what snap
+        let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+        movingObjs.forEach(o=>{ minX=Math.min(minX,o.x); minY=Math.min(minY,o.y); maxX=Math.max(maxX,o.x+o.w); maxY=Math.max(maxY,o.y+o.h); });
+        const g0 = {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
+
         function onMove(ev){
-          const dx = (ev.clientX-moveStart.x)/moveStart.rectW*100;
-          const dy = (ev.clientY-moveStart.y)/moveStart.rectH*100;
-          moveOrigins.regions.forEach(o=>{ o.r.x=o.x+dx; o.r.y=o.y+dy; });
-          if(moveOrigins.focus){ state.focusArea.x=moveOrigins.focus.x+dx; state.focusArea.y=moveOrigins.focus.y+dy; }
+          let dx = (ev.clientX-downX)/rect.width*100;
+          let dy = (ev.clientY-downY)/rect.height*100;
+          let gx=[], gy=[];
+          if(!ev.altKey && movingObjs.length){
+            const s = hsSnapMoveDelta({x:g0.x+dx, y:g0.y+dy, w:g0.w, h:g0.h}, tg, HS_SNAP_PX/rect.width*100, HS_SNAP_PX/rect.height*100);
+            dx += s.dx; dy += s.dy;
+            const g = hsGuideLines({x:g0.x+dx, y:g0.y+dy, w:g0.w, h:g0.h}, tg);
+            gx = g.gx; gy = g.gy;
+          }
+          origins.forEach(o=>{ o.r.x=o.x+dx; o.r.y=o.y+dy; });
+          if(focusOrigin){ state.focusArea.x=focusOrigin.x+dx; state.focusArea.y=focusOrigin.y+dy; }
           hsRenderAll(cardEl);
+          hsDrawGuides(wrap, gx, gy);
         }
         function onUp(){
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
+          hsClearGuides(wrap);
         }
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
         return;
       }
-      const rect = wrap.getBoundingClientRect();
-      startX = e.clientX-rect.left; startY = e.clientY-rect.top;
-      dragging = true;
-      dragEl = document.createElement('div');
-      dragEl.className = 'hs-marquee-box';
-      dragEl.style.left=startX+'px'; dragEl.style.top=startY+'px';
-      wrap.appendChild(dragEl);
+      beginBoxDrag('marquee', e);
       return;
     }
 
     if(state.currentTool==='draw' && e.target.closest('.hs-region')) return;
-
-    const rect = wrap.getBoundingClientRect();
-    startX = e.clientX-rect.left; startY = e.clientY-rect.top;
-    dragging = true;
-    dragEl = document.createElement('div');
-    dragEl.className = 'hs-drawing-box';
-    dragEl.style.left=startX+'px'; dragEl.style.top=startY+'px';
-    wrap.appendChild(dragEl);
-  });
-
-  wrap.addEventListener('mousemove', (e)=>{
-    if(!dragging) return;
-    const rect = wrap.getBoundingClientRect();
-    const curX = e.clientX-rect.left, curY = e.clientY-rect.top;
-    const left=Math.min(startX,curX), top=Math.min(startY,curY);
-    dragEl.style.left=left+'px'; dragEl.style.top=top+'px';
-    dragEl.style.width=Math.abs(curX-startX)+'px'; dragEl.style.height=Math.abs(curY-startY)+'px';
-  });
-
-  wrap.addEventListener('mouseup', ()=>{
-    if(!dragging) return;
-    dragging=false;
-    const rect = wrap.getBoundingClientRect();
-    const br = dragEl.getBoundingClientRect();
-    dragEl.remove();
-
-    if(state.currentTool==='select'){
-      if(br.width<6 || br.height<6){ state.selectedIds.clear(); state.selectedFocus=false; hsRenderAll(cardEl); return; }
-      const mbox = { left:br.left-rect.left, top:br.top-rect.top, right:br.left-rect.left+br.width, bottom:br.top-rect.top+br.height };
-      state.selectedIds.clear(); state.selectedFocus=false;
-      state.regions.forEach(r=>{
-        const rl=r.x/100*rect.width, rt=r.y/100*rect.height;
-        const rr=rl+r.w/100*rect.width, rb=rt+r.h/100*rect.height;
-        if(rl<mbox.right && rr>mbox.left && rt<mbox.bottom && rb>mbox.top) state.selectedIds.add(r.id);
-      });
-      hsRenderAll(cardEl);
-      return;
-    }
-
-    if(br.width<8 || br.height<8) return;
-    const box = {
-      x:(br.left-rect.left)/rect.width*100, y:(br.top-rect.top)/rect.height*100,
-      w:br.width/rect.width*100, h:br.height/rect.height*100
-    };
-    hsSnapshotForUndo(cardEl);
-    if(state.currentTool==='focus'){
-      state.focusArea = box;
-    } else {
-      state.regions.push({ id: state.nextId++, ...box, correct: state.regions.length===0 });
-    }
-    hsRenderAll(cardEl);
+    beginBoxDrag('draw', e);
   });
 }
 
