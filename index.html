@@ -260,6 +260,48 @@ main{min-width:0}
 .qcard-explain textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:10px 13px;font-size:14.5px;font-family:var(--body);color:var(--ink);min-height:70px;resize:vertical}
 .qcard-explain textarea:focus{border-color:var(--coral);outline:none}
 .qcard-shotwrap{margin-top:10px}
+
+/* ---------- rich-text explanation editor (admin) ---------- */
+.rt-editor-wrap{border:1.5px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);overflow:hidden}
+.rt-editor-wrap:focus-within{border-color:var(--coral)}
+.rt-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:6px 8px;border-bottom:1px solid var(--line-soft);background:var(--bg)}
+.rt-btn{background:none;border:0;border-radius:6px;padding:5px 9px;min-width:30px;font-size:13px;color:var(--ink-soft);cursor:pointer}
+.rt-btn:hover{background:var(--line-soft)}
+.rt-btn.active{background:var(--coral-soft);color:var(--coral-deep)}
+.rt-sep{width:1px;height:18px;background:var(--line);margin:0 5px}
+.rt-editor{min-height:96px;padding:11px 14px;font-size:14.5px;line-height:1.55;color:var(--ink);outline:none}
+.rt-editor.is-empty::before{content:attr(data-placeholder);color:var(--ink-faint);float:left;height:0;pointer-events:none}
+/* shared by the editor and by what learners see */
+.rt-editor ul,.explain-text ul{margin:6px 0 6px 22px;padding:0;list-style:disc}
+.rt-editor ol,.explain-text ol{margin:6px 0 6px 22px;padding:0;list-style:decimal}
+.rt-editor li,.explain-text li{margin:3px 0}
+.rt-editor a,.explain-text a{color:var(--teal);text-decoration:underline}
+.rt-editor blockquote,.explain-text blockquote{margin:8px 0;padding-left:12px;border-left:3px solid var(--line);color:var(--ink-soft)}
+.explain-text{margin:8px 0;color:var(--ink);font-size:15px;line-height:1.6}
+.explain-text p{margin:8px 0}
+.explain-text div{margin:0}
+
+/* ---------- several screenshots per explanation, each with a caption (admin) ---------- */
+.exp-shots-label{margin-top:16px !important}
+.exp-shot-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.exp-shot-item{display:flex;gap:12px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg)}
+.exp-shot-item img{width:120px;height:76px;object-fit:cover;border-radius:7px;border:1px solid var(--line);flex-shrink:0;background:#fff}
+.exp-shot-fields{flex:1;min-width:0}
+.exp-shot-caption{width:100%;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:8px 11px;font-size:13.5px;font-family:var(--body);background:var(--surface);color:var(--ink)}
+.exp-shot-caption:focus{border-color:var(--coral);outline:none}
+.exp-shot-actions{display:flex;align-items:center;gap:6px;margin-top:8px}
+.exp-shot-num{font-size:12px;color:var(--ink-faint);flex:1}
+.exp-shot-btn{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12.5px;color:var(--ink-soft);cursor:pointer}
+.exp-shot-btn:hover:not(:disabled){border-color:var(--teal);color:var(--teal)}
+.exp-shot-btn:disabled{opacity:.4;cursor:default}
+.exp-shot-btn.danger:hover:not(:disabled){border-color:var(--coral);color:var(--coral-deep)}
+.exp-shot-add{display:block;width:100%;border:1.5px dashed var(--line);border-radius:var(--radius-sm);background:var(--bg);padding:11px;font-size:13.5px;color:var(--ink-soft);cursor:pointer}
+.exp-shot-add:hover{border-color:var(--coral);color:var(--coral-deep)}
+
+/* ---------- what learners see ---------- */
+.explain-fig{margin:14px 0 0}
+.explain-fig .explain-shot{margin:0}
+.explain-fig figcaption{margin-top:8px;font-size:13px;line-height:1.5;color:var(--ink-soft)}
 .qcard-include{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13.5px;font-weight:500;color:var(--ink-soft)}
 .qcard-include input{width:16px;height:16px;accent-color:var(--coral)}
 
@@ -1171,6 +1213,7 @@ function renderHotspotSlides(block, q, qi, alreadyDone, onSlideResult, onQuestio
     });
     const firstScorable = slides.findIndex(s=>s.image);
     if(firstScorable>=0) showStep(firstScorable);
+    onQuestionDone();   // reviewing a finished question still shows its notes
   }
 
   // ---------- fresh attempt: auto-advance, timed reveal, then a review summary ----------
@@ -1366,16 +1409,12 @@ function renderActiveLearnerModule(){
         renderHotspotSlides(block, q, qi, alreadyDone,
           (wasCorrect)=>{ if(wasCorrect) currentModuleScore.correct++; },
           ()=>{
-            if(q.explanation || q.explanationImage){
+            if(explanationHasContent(q)){
               const wrap = document.createElement('div');
               wrap.className = 'explain show';
-              wrap.innerHTML = `
-                <span class="tag">Notes</span>
-                <p>${escapeHtml(q.explanation)}</p>
-                ${q.explanationImage ? `${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>${HS_ZOOM_CLOSE}` : ''}
-              `;
+              wrap.innerHTML = `<span class="tag">Notes</span>${explanationBodyHtml(q)}`;
               block.appendChild(wrap);
-              wireHsZoom(wrap.querySelector('.hs-zoom-viewport'));
+              wireExplanationZoom(wrap);
             }
             answered.add(qi);
             checkAllAnswered();
@@ -1389,10 +1428,9 @@ function renderActiveLearnerModule(){
           <div class="qopts-${qi}">${opts}</div>
           <div class="explain${alreadyDone?' show':''}" id="learnerExplain${qi}">
             <span class="tag">Correct</span>
-            <p>${escapeHtml(q.explanation)}</p>
-            ${q.explanationImage ? `${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>${HS_ZOOM_CLOSE}` : ''}
+            ${explanationBodyHtml(q)}
           </div>`;
-        wireHsZoom(block.querySelector('.hs-zoom-viewport'));
+        wireExplanationZoom(block);
         if(alreadyDone){
           const correctBtn = block.querySelector(`.qopts-${qi} .opt[data-correct="true"]`);
           if(correctBtn) correctBtn.classList.add('correct');
@@ -1445,7 +1483,15 @@ function renderAnswerKeyQuestion(container, q, qi){
   container.appendChild(block);
 
   if(q.type==='hotspot'){
-    renderHotspotSlides(block, q, qi, true, ()=>{}, ()=>{});
+    renderHotspotSlides(block, q, qi, true, ()=>{}, ()=>{
+      if(explanationHasContent(q)){
+        const wrap = document.createElement('div');
+        wrap.className = 'explain show';
+        wrap.innerHTML = `<span class="tag">Notes</span>${explanationBodyHtml(q)}`;
+        block.appendChild(wrap);
+        wireExplanationZoom(wrap);
+      }
+    });
   } else {
     const opts = (q.options||[]).map((opt,i)=>`<button type="button" class="opt" data-idx="${i}" data-correct="${i===q.correctIndex}" disabled><span class="dot"></span> ${escapeHtml(opt)}</button>`).join('');
     block.innerHTML = `
@@ -1453,10 +1499,9 @@ function renderAnswerKeyQuestion(container, q, qi){
       <div class="qopts-ak${qi}">${opts}</div>
       <div class="explain show">
         <span class="tag">Correct</span>
-        <p>${escapeHtml(q.explanation)}</p>
-        ${q.explanationImage ? `${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(q.explanationImage)}"></div>${HS_ZOOM_CLOSE}` : ''}
+        ${explanationBodyHtml(q)}
       </div>`;
-    wireHsZoom(block.querySelector('.hs-zoom-viewport'));
+    wireExplanationZoom(block);
     const correctBtn = block.querySelector(`.qopts-ak${qi} .opt[data-correct="true"]`);
     if(correctBtn) correctBtn.classList.add('correct');
   }
@@ -1679,6 +1724,78 @@ function applyQuizResultTint(block, ratio){
   else block.classList.add('q-correct');
 }
 
+/* ---------- rich-text explanations ----------
+   Saved as sanitized HTML behind a marker. Anything WITHOUT the marker is an older plain-text
+   explanation and is shown as plain text, so nothing already written can break. */
+const RT_MARK = '<!--rt-->';
+const RT_KEEP = new Set(['B','STRONG','I','EM','U','S','BR','P','DIV','UL','OL','LI','A','BLOCKQUOTE']);
+const RT_DROP = new Set(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','NOSCRIPT','TEMPLATE','SVG','MATH','HEAD','META','LINK','TITLE','BASE','FORM','INPUT','TEXTAREA','BUTTON','SELECT','IMG','VIDEO','AUDIO','CANVAS']);
+
+function sanitizeRichHtml(html){
+  const tpl = document.createElement('template');           // inert: nothing in here runs or loads
+  tpl.innerHTML = String(html==null ? '' : html);
+  const wrapKids = (el, tag)=>{ const w=document.createElement(tag); while(el.firstChild) w.appendChild(el.firstChild); el.appendChild(w); };
+  (function clean(parent){
+    Array.from(parent.childNodes).forEach(node=>{
+      if(node.nodeType===3) return;
+      if(node.nodeType!==1){ node.remove(); return; }
+      const tag = node.tagName.toUpperCase();
+      if(RT_DROP.has(tag)){ node.remove(); return; }
+      clean(node);
+      const style = (node.getAttribute('style')||'').toLowerCase();
+      if(tag==='SPAN'){
+        // Word / Google Docs express bold, italic and underline as styled spans — keep that meaning
+        if(/text-decoration[^;]*underline/.test(style)) wrapKids(node,'u');
+        if(/font-style\s*:\s*italic/.test(style)) wrapKids(node,'i');
+        if(/font-weight\s*:\s*(bold|bolder|[6-9]00)/.test(style)) wrapKids(node,'b');
+        node.replaceWith(...Array.from(node.childNodes));
+        return;
+      }
+      if(!RT_KEEP.has(tag)){ node.replaceWith(...Array.from(node.childNodes)); return; }
+      // Google Docs wraps everything it copies in <b style="font-weight:normal">
+      if((tag==='B' || tag==='STRONG') && /font-weight\s*:\s*(normal|[1-5]00)/.test(style)){
+        node.replaceWith(...Array.from(node.childNodes)); return;
+      }
+      Array.from(node.attributes).forEach(a=>{ if(!(tag==='A' && a.name==='href')) node.removeAttribute(a.name); });
+      if(tag==='A'){
+        const href = (node.getAttribute('href')||'').trim();
+        if(/^(https?:|mailto:)/i.test(href)){ node.setAttribute('target','_blank'); node.setAttribute('rel','noopener noreferrer'); }
+        else node.replaceWith(...Array.from(node.childNodes));
+      }
+    });
+  })(tpl.content);
+  return tpl.innerHTML;
+}
+// stored value -> safe HTML (for the editor and for learners)
+function richHtml(str){
+  const s = String(str==null ? '' : str);
+  if(!s.trim()) return '';
+  if(s.startsWith(RT_MARK)) return sanitizeRichHtml(s.slice(RT_MARK.length));
+  return escapeHtml(s).replace(/\r?\n/g, '<br>');          // older plain-text explanation
+}
+// editor -> stored value ('' when there is no actual text)
+function richToStored(editorEl){
+  let clean = sanitizeRichHtml(editorEl.innerHTML);
+  clean = clean.replace(/(?:<br>|<div>\s*<br>\s*<\/div>|<p>\s*<\/p>)+$/i, '');
+  const probe = document.createElement('div'); probe.innerHTML = clean;
+  return probe.textContent.trim() ? RT_MARK + clean : '';
+}
+
+// what learners (and the Answer Guide) see under a question: formatted text, then each screenshot with its caption
+function explanationHasContent(q){
+  return !!(richHtml(q.explanation) || (q.explanationImages||[]).some(x=>x && x.src));
+}
+function explanationBodyHtml(q){
+  const text = richHtml(q.explanation);
+  const figs = (q.explanationImages||[]).filter(x=>x && x.src).map(im=>
+    `<figure class="explain-fig">${HS_ZOOM_OPEN}<div class="explain-shot"><img src="${escapeHtml(im.src)}" alt="${escapeHtml(im.caption||'')}"></div>${HS_ZOOM_CLOSE}${im.caption ? `<figcaption>${escapeHtml(im.caption)}</figcaption>` : ''}</figure>`
+  ).join('');
+  return (text ? `<div class="explain-text">${text}</div>` : '') + figs;
+}
+function wireExplanationZoom(container){
+  container.querySelectorAll('.hs-zoom-viewport').forEach(wireHsZoom);
+}
+
 function escapeHtml(str){
   return String(str==null ? '' : str)
     .replace(/&/g,'&amp;')
@@ -1891,8 +2008,31 @@ function dbQuestionToLocal(row){
     dbId: row.id, type: row.type, question: row.question || '',
     options: row.options || [], correctIndex: row.correct_index,
     slides,
-    explanation: row.explanation || '', explanationImage: row.explanation_image || '', published: !!row.published
+    explanation: row.explanation || '', explanationImages: dbExplanationImages(row), published: !!row.published
   };
+}
+// quizzes saved before captions existed kept ONE screenshot in explanation_image — still shown, now as the first of the list
+function dbExplanationImages(row){
+  if(Array.isArray(row.explanation_images)){
+    return row.explanation_images.filter(x=>x && x.src).map(x=>({ src:x.src, caption:x.caption||'' }));
+  }
+  if(row.explanation_image) return [{ src: row.explanation_image, caption:'' }];
+  return [];
+}
+// Replace a tab's rows SAFELY: write the new rows FIRST and only delete the old ones once that worked,
+// so a failed publish (network, size, a missing column) can never leave the tab empty.
+async function replaceModuleRows(table, moduleDbId, newRows){
+  const { data: oldRows, error: selErr } = await sb.from(table).select('id').eq('module_id', moduleDbId);
+  if(selErr) throw selErr;
+  const oldIds = (oldRows||[]).map(r=>r.id);
+  if(newRows.length){
+    const { error: insErr } = await sb.from(table).insert(newRows);
+    if(insErr) throw insErr;
+  }
+  if(oldIds.length){
+    const { error: delErr } = await sb.from(table).delete().in('id', oldIds);
+    if(delErr) throw delErr;
+  }
 }
 function dbFlashcardToLocal(row){
   return { dbId: row.id, term: row.term || '', definition: row.definition || '', published: !!row.published };
@@ -1904,7 +2044,10 @@ function localQuestionToDbRow(q, moduleId, clientId, sortOrder){
     correct_index: q.type==='mcq' ? q.correctIndex : null,
     image: null, regions: null, focus_area: null,
     slides: q.type==='hotspot' ? (q.slides||[]) : null,
-    explanation: q.explanation || '', explanation_image: q.explanationImage || '', published: !!q.published, sort_order: sortOrder
+    explanation: q.explanation || '',
+    explanation_images: (q.explanationImages && q.explanationImages.length) ? q.explanationImages : null,
+    explanation_image: '',   // older single-screenshot column; anything it held now lives in explanation_images
+    published: !!q.published, sort_order: sortOrder
   };
 }
 function localFlashcardToDbRow(f, moduleId, clientId, sortOrder){
@@ -2704,12 +2847,24 @@ function qcardTemplate(q){
     <div class="qcard-body" data-role="qcardbody">${renderQcardBody(q, id)}</div>
     <div class="qcard-explain">
       <label>Explanation</label>
-      <textarea placeholder="Explain why this is correct...">${escapeHtml(q.explanation)}</textarea>
-      <div class="qcard-shotwrap">
-        <div class="upload-box small" data-role="shotbox" style="${q.explanationImage?'display:none':''}"><div class="uicon">📸</div><div class="utext">Click to upload a screenshot</div></div>
-        <input type="file" accept="image/*" style="display:none" data-role="shotinput">
-        ${q.explanationImage ? `<div class="upload-preview" style="margin-top:8px"><img src="${escapeHtml(q.explanationImage)}"><span class="fname">Current screenshot</span><button type="button" data-role="removeshot">Remove</button></div>` : ''}
+      <div class="rt-editor-wrap">
+        <div class="rt-toolbar" data-role="rtToolbar">
+          <button type="button" class="rt-btn" data-cmd="bold" title="Bold (Ctrl/⌘+B)"><b>B</b></button>
+          <button type="button" class="rt-btn" data-cmd="italic" title="Italic (Ctrl/⌘+I)"><i>I</i></button>
+          <button type="button" class="rt-btn" data-cmd="underline" title="Underline (Ctrl/⌘+U)"><u>U</u></button>
+          <span class="rt-sep"></span>
+          <button type="button" class="rt-btn" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+          <button type="button" class="rt-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+          <span class="rt-sep"></span>
+          <button type="button" class="rt-btn" data-cmd="link" title="Add or remove a link">🔗 Link</button>
+          <button type="button" class="rt-btn" data-cmd="clear" title="Clear formatting">Clear</button>
+        </div>
+        <div class="rt-editor${richHtml(q.explanation)?'':' is-empty'}" contenteditable="true" data-role="rtEditor" data-placeholder="Explain why this is correct...">${richHtml(q.explanation)}</div>
       </div>
+      <label class="exp-shots-label">Screenshots for the correct answer <span style="font-weight:400">— optional, each one can have its own caption</span></label>
+      <div class="exp-shot-list" data-role="expShotList"></div>
+      <button type="button" class="exp-shot-add" data-role="expShotAdd">📸 Add screenshots</button>
+      <input type="file" accept="image/*" multiple style="display:none" data-role="expShotInput">
     </div>
     <label class="qcard-include"><input type="checkbox" data-role="include" ${q.published?'checked':''}> Include in published quiz</label>
   </div>`;
@@ -3151,6 +3306,8 @@ function mountQcard(q){
   temp.innerHTML = html;
   const cardEl = temp.firstElementChild;
   document.getElementById('qcardList').appendChild(cardEl);
+  cardEl.expImages = (q.explanationImages||[]).map(x=>({ src:x.src, caption:x.caption||'' }));
+  renderExpShots(cardEl);
   if(q.type==='hotspot'){
     const slides = (q.slides && q.slides.length)
       ? q.slides.map(s=>({ image: s.image||'', regions: (s.regions||[]).map(r=>({...r})), focusArea: s.focusArea?{...s.focusArea}:null }))
@@ -3326,10 +3483,6 @@ document.getElementById('qcardList').addEventListener('click', (e)=>{
     });
     return;
   }
-  if(e.target.closest('[data-role="shotbox"]')){
-    e.target.closest('.qcard').querySelector('[data-role="shotinput"]').click();
-    return;
-  }
   if(e.target.closest('[data-role="settype"]')){
     const btn = e.target.closest('[data-role="settype"]');
     const card = btn.closest('.qcard');
@@ -3413,24 +3566,6 @@ document.getElementById('qcardList').addEventListener('change', (e)=>{
     e.target.closest('.qcard-opt').classList.add('iscorrect');
     return;
   }
-  if(e.target.dataset.role === 'shotinput'){
-    const file = e.target.files[0]; if(!file) return;
-    const wrap = e.target.closest('.qcard-shotwrap');
-    const reader = new FileReader();
-    reader.onload = (ev)=>{
-      wrap.querySelector('[data-role="shotbox"]').style.display='none';
-      let preview = wrap.querySelector('.upload-preview');
-      if(!preview){
-        preview = document.createElement('div');
-        preview.className='upload-preview';
-        preview.style.marginTop='8px';
-        wrap.appendChild(preview);
-      }
-      preview.innerHTML = `<img src="${escapeHtml(ev.target.result)}"><span class="fname">${escapeHtml(file.name)}</span><button type="button" data-role="removeshot">Remove</button>`;
-    };
-    reader.readAsDataURL(file);
-    return;
-  }
   if(e.target.dataset.role === 'hsFileInput'){
     const file = e.target.files[0]; if(!file) return;
     const card = e.target.closest('.qcard');
@@ -3454,22 +3589,144 @@ document.getElementById('qcardList').addEventListener('change', (e)=>{
     return;
   }
 });
-document.getElementById('qcardList').addEventListener('click', (e)=>{
-  if(e.target.dataset.role === 'removeshot'){
-    const wrap = e.target.closest('.qcard-shotwrap');
-    wrap.querySelector('.upload-preview').remove();
-    wrap.querySelector('[data-role="shotbox"]').style.display='';
-    wrap.querySelector('[data-role="shotinput"]').value='';
-  }
+/* ---- explanation editor: rich text + several screenshots, each with its own caption ---- */
+function rtUpdateEmpty(ed){ ed.classList.toggle('is-empty', !ed.textContent.trim() && !ed.querySelector('li')); }
+function rtSyncToolbar(ed){
+  const bar = ed.closest('.rt-editor-wrap').querySelector('.rt-toolbar');
+  const state = c=>{ try{ return document.queryCommandState(c); }catch(_){ return false; } };
+  const sel = window.getSelection();
+  const n = sel && sel.anchorNode;
+  const el = n && (n.nodeType===1 ? n : n.parentElement);
+  bar.querySelectorAll('.rt-btn[data-cmd]').forEach(b=>{
+    const c = b.dataset.cmd;
+    let on = false;
+    if(['bold','italic','underline','insertUnorderedList','insertOrderedList'].includes(c)) on = state(c);
+    else if(c==='link') on = !!(el && ed.contains(el) && el.closest('a'));
+    b.classList.toggle('active', on);
+  });
+}
+function rtToggleLink(ed){
+  const sel = window.getSelection();
+  if(!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const host = range.commonAncestorContainer.nodeType===1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+  const existing = host && host.closest('a');
+  if(existing && ed.contains(existing)){ document.execCommand('unlink'); return; }
+  const saved = range.cloneRange();
+  let url = window.prompt('Link address (e.g. https://…)');
+  if(!url || !url.trim()) return;
+  url = url.trim();
+  if(!/^(https?:\/\/|mailto:)/i.test(url)) url = 'https://' + url;
+  sel.removeAllRanges(); sel.addRange(saved);
+  if(saved.collapsed) document.execCommand('insertHTML', false, `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>`);
+  else document.execCommand('createLink', false, url);
+}
+// clicking a toolbar button must not steal the text selection from the editor
+document.addEventListener('mousedown', (e)=>{ if(e.target.closest && e.target.closest('.rt-btn')) e.preventDefault(); });
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest && e.target.closest('.rt-btn');
+  if(!btn) return;
+  const ed = btn.closest('.rt-editor-wrap').querySelector('.rt-editor');
+  ed.focus();
+  document.execCommand('styleWithCSS', false, false);   // real <b>/<i>/<u> tags, not styled spans
+  const cmd = btn.dataset.cmd;
+  if(cmd==='link') rtToggleLink(ed);
+  else if(cmd==='clear'){ document.execCommand('removeFormat'); document.execCommand('unlink'); }
+  else document.execCommand(cmd);
+  rtUpdateEmpty(ed); rtSyncToolbar(ed);
 });
+document.addEventListener('selectionchange', ()=>{
+  const sel = window.getSelection();
+  if(!sel || !sel.anchorNode) return;
+  const el = sel.anchorNode.nodeType===1 ? sel.anchorNode : sel.anchorNode.parentElement;
+  const ed = el && el.closest && el.closest('.rt-editor');
+  if(ed) rtSyncToolbar(ed);
+});
+document.addEventListener('input', (e)=>{
+  const ed = e.target.closest && e.target.closest('.rt-editor');
+  if(ed) rtUpdateEmpty(ed);
+});
+// pasted text keeps simple formatting (bold, lists, links) but drops everything else Word/web pages bring along
+document.addEventListener('paste', (e)=>{
+  const ed = e.target.closest && e.target.closest('.rt-editor');
+  if(!ed) return;
+  e.preventDefault();
+  const html = e.clipboardData.getData('text/html');
+  if(html) document.execCommand('insertHTML', false, sanitizeRichHtml(html));
+  else document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+  rtUpdateEmpty(ed);
+});
+document.addEventListener('drop', (e)=>{
+  if(e.target.closest && e.target.closest('.rt-editor') && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) e.preventDefault();
+});
+
+function renderExpShots(card){
+  const list = card.querySelector('[data-role="expShotList"]');
+  const addBtn = card.querySelector('[data-role="expShotAdd"]');
+  const imgs = card.expImages || [];
+  list.innerHTML = imgs.map((im,i)=>`
+    <div class="exp-shot-item" data-idx="${i}">
+      <img src="${escapeHtml(im.src)}" alt="">
+      <div class="exp-shot-fields">
+        <input type="text" class="exp-shot-caption" data-role="expShotCaption" placeholder="Caption for this screenshot (optional)" value="${escapeHtml(im.caption||'')}">
+        <div class="exp-shot-actions">
+          <span class="exp-shot-num">Screenshot ${i+1} of ${imgs.length}</span>
+          <button type="button" class="exp-shot-btn" data-role="expShotUp" title="Move earlier"${i===0?' disabled':''}>↑</button>
+          <button type="button" class="exp-shot-btn" data-role="expShotDown" title="Move later"${i===imgs.length-1?' disabled':''}>↓</button>
+          <button type="button" class="exp-shot-btn danger" data-role="expShotDel">Remove</button>
+        </div>
+      </div>
+    </div>`).join('');
+  addBtn.textContent = imgs.length ? '+ Add more screenshots' : '📸 Add screenshots';
+}
+function readImageFiles(fileList){
+  const files = Array.from(fileList||[]).filter(f=>f.type && f.type.startsWith('image/'));
+  return Promise.all(files.map(f=>new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve({ src: r.result, caption: '' });
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  })));
+}
+document.getElementById('qcardList').addEventListener('click', (e)=>{
+  const role = e.target.dataset && e.target.dataset.role;
+  if(!role || role.indexOf('expShot')!==0) return;
+  const card = e.target.closest('.qcard');
+  if(!card) return;
+  if(role==='expShotAdd'){ card.querySelector('[data-role="expShotInput"]').click(); return; }
+  const item = e.target.closest('.exp-shot-item');
+  if(!item) return;
+  const idx = +item.dataset.idx;
+  const arr = card.expImages || (card.expImages = []);
+  if(role==='expShotDel'){ arr.splice(idx, 1); }
+  else if(role==='expShotUp' && idx>0){ const t=arr[idx-1]; arr[idx-1]=arr[idx]; arr[idx]=t; }
+  else if(role==='expShotDown' && idx<arr.length-1){ const t=arr[idx+1]; arr[idx+1]=arr[idx]; arr[idx]=t; }
+  else return;
+  renderExpShots(card);
+});
+document.getElementById('qcardList').addEventListener('change', async (e)=>{
+  if(!(e.target.dataset && e.target.dataset.role==='expShotInput')) return;
+  const card = e.target.closest('.qcard');
+  const added = await readImageFiles(e.target.files);
+  e.target.value = '';
+  if(!card || !added.length) return;
+  card.expImages = (card.expImages||[]).concat(added);
+  renderExpShots(card);
+});
+document.getElementById('qcardList').addEventListener('input', (e)=>{
+  if(!(e.target.dataset && e.target.dataset.role==='expShotCaption')) return;
+  const card = e.target.closest('.qcard');
+  const item = e.target.closest('.exp-shot-item');
+  if(card && item && card.expImages && card.expImages[+item.dataset.idx]) card.expImages[+item.dataset.idx].caption = e.target.value;
+});
+/* ---- end explanation editor ---- */
 
 function collectQcardData(card){
   const type = card.dataset.type;
   const question = card.querySelector('.qcard-question').value;
-  const explanation = card.querySelector('.qcard-explain textarea').value;
+  const explanation = richToStored(card.querySelector('[data-role="rtEditor"]'));
   const published = card.querySelector('[data-role="include"]').checked;
-  const shotImgEl = card.querySelector('.qcard-shotwrap .upload-preview img');
-  const explanationImage = shotImgEl ? shotImgEl.getAttribute('src') : '';
+  const explanationImages = (card.expImages||[]).filter(x=>x && x.src).map(x=>({ src:x.src, caption:(x.caption||'').trim() }));
 
   if(type==='hotspot'){
     hsSyncActiveSlideFromState(card);
@@ -3478,7 +3735,7 @@ function collectQcardData(card){
       regions: (s.regions||[]).map(r=>({x:r.x,y:r.y,w:r.w,h:r.h,correct:!!r.correct})),
       focusArea: s.focusArea ? {x:s.focusArea.x,y:s.focusArea.y,w:s.focusArea.w,h:s.focusArea.h} : null
     }));
-    return { type:'hotspot', question, explanation, published, explanationImage, slides };
+    return { type:'hotspot', question, explanation, published, explanationImages, slides };
   }
 
   const opts = Array.from(card.querySelectorAll('.qcard-opt')).map(row=>({
@@ -3487,7 +3744,7 @@ function collectQcardData(card){
   }));
   let correctIndex = opts.findIndex(o=>o.correct);
   if(correctIndex===-1) correctIndex = 0;
-  return { type:'mcq', question, explanation, published, explanationImage, options: opts.map(o=>o.text), correctIndex };
+  return { type:'mcq', question, explanation, published, explanationImages, options: opts.map(o=>o.text), correctIndex };
 }
 
 function collectFlashcardData(row){
@@ -3534,21 +3791,10 @@ document.getElementById('publishQuizBtn').addEventListener('click', async ()=>{
       if(renameErr) throw renameErr;
     }
 
-    const { error: delQErr } = await sb.from('quiz_questions').delete().eq('module_id', mod.dbId);
-    if(delQErr) throw delQErr;
-    if(mod.questions.length){
-      const qToInsert = mod.questions.map((q,i)=>localQuestionToDbRow(q, mod.dbId, client.dbId, i));
-      const { error: insQErr } = await sb.from('quiz_questions').insert(qToInsert);
-      if(insQErr) throw insQErr;
-    }
-
-    const { error: delFErr } = await sb.from('glossary_terms').delete().eq('module_id', mod.dbId);
-    if(delFErr) throw delFErr;
-    if(mod.flashcards.length){
-      const fToInsert = mod.flashcards.map((f,i)=>localFlashcardToDbRow(f, mod.dbId, client.dbId, i));
-      const { error: insFErr } = await sb.from('glossary_terms').insert(fToInsert);
-      if(insFErr) throw insFErr;
-    }
+    await replaceModuleRows('quiz_questions', mod.dbId,
+      mod.questions.map((q,i)=>localQuestionToDbRow(q, mod.dbId, client.dbId, i)));
+    await replaceModuleRows('glossary_terms', mod.dbId,
+      mod.flashcards.map((f,i)=>localFlashcardToDbRow(f, mod.dbId, client.dbId, i)));
 
     cards.forEach(card=>{
       const included = card.querySelector('[data-role="include"]').checked;
@@ -3563,7 +3809,14 @@ document.getElementById('publishQuizBtn').addEventListener('click', async ()=>{
     setTimeout(()=>t.classList.remove('show'), 3500);
   } catch(err){
     console.error('Publish failed:', err);
-    openModal({ title:'Publish failed', body: 'Something went wrong saving to the database: ' + (err.message||String(err)), confirmText:'OK', onConfirm:()=>{} });
+    const msg = err.message || String(err);
+    openModal({
+      title: 'Publish failed',
+      body: /explanation_images/.test(msg)
+        ? 'The database needs one quick update before screenshots with captions can be saved. Run banner-university-explanation-images.sql in the Supabase SQL Editor, then publish again. Your existing quiz is untouched.'
+        : 'Something went wrong saving to the database: ' + msg + '. Nothing was deleted — you can try publishing again.',
+      confirmText: 'OK', onConfirm: ()=>{}
+    });
   } finally {
     btn.disabled = false;
     btn.textContent = 'Publish';
